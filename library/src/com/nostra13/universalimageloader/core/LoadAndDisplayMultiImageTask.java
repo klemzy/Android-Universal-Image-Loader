@@ -161,7 +161,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
                 bmp = configuration.memoryCache.get(memoryCacheKey);
                 if (bmp == null)
                 {
-                    bmp = tryLoadBitmapFromDisK(loadingInfo);
+                    bmp = tryLoadBitmapFromDisk(loadingInfo);
                     if (bmp == null) continue;
 
                     if (isTaskNotActual(loadingInfo.imageAware, memoryCacheKey)) continue;
@@ -285,7 +285,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         runTask(displayBitmapTask, loadingInfo.options.isSyncLoading(), loadingInfo.options.getHandler(), engine);
     }
 
-    private Bitmap tryLoadBitmapFromDisK(ImageLoadingInfo loadingInfo) throws TaskCancelledException
+    private Bitmap tryLoadBitmapFromDisk(ImageLoadingInfo loadingInfo) throws TaskCancelledException
     {
         File imageFile = configuration.diskCache.get(loadingInfo.uri);
 
@@ -383,7 +383,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         boolean cachedToDisc;
         try
         {
-            cachedToDisc = loadingInfo.options.isCacheOnDisk() && tryCacheImageOnDisk(loadingInfo, imageFile, imageBinary);
+            cachedToDisc = loadingInfo.options.isCacheOnDisk() && tryCacheImageOnDisk(loadingInfo, imageBinary);
         }
         catch (TaskCancelledException e)
         {
@@ -429,14 +429,14 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
     }
 
 
-    private boolean tryCacheImageOnDisk(ImageLoadingInfo loadingInfo, File targetFile, byte[] imageData) throws TaskCancelledException
+    private boolean tryCacheImageOnDisk(ImageLoadingInfo loadingInfo, byte[] imageData) throws TaskCancelledException
     {
         log(LOG_CACHE_IMAGE_ON_DISC);
 
         boolean loaded = false;
         try
         {
-            loaded = saveImageToDisc(targetFile, imageData);
+            loaded = configuration.diskCache.save(loadingInfo.uri, new ByteArrayInputStream(imageData), null);
             if (loaded)
             {
                 int width = configuration.maxImageWidthForDiskCache;
@@ -451,37 +451,11 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         catch (IOException e)
         {
             L.e(e);
-            if (targetFile.exists())
-            {
-                targetFile.delete();
-            }
         }
 
         return loaded;
     }
 
-    private boolean saveImageToDisc(File targetFile, byte[] imageData) throws IOException
-    {
-        InputStream is = new ByteArrayInputStream(imageData);
-        boolean loaded;
-        try
-        {
-            OutputStream os = new BufferedOutputStream(new FileOutputStream(targetFile), BUFFER_SIZE);
-            try
-            {
-                loaded = IoUtils.copyStream(is, os, this);
-            }
-            finally
-            {
-                IoUtils.closeSilently(os);
-            }
-        }
-        finally
-        {
-            IoUtils.closeSilently(is);
-        }
-        return loaded;
-    }
 
     /**
      * Decodes image file into Bitmap, resize it and save it back
