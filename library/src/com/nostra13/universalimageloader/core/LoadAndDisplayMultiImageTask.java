@@ -87,7 +87,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
 
     private static final String ERROR_PROCESSOR_FOR_DISK_CACHE_NULL = "Bitmap processor for disc cache returned null [%s]";
 
-    private final List<ImageLoadingInfo> loadingInfoList;
+    private final List<ImageServeInfo> loadingInfoList;
 
     private final ImageLoaderEngine engine;
 
@@ -108,7 +108,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
 
     private LoadedFrom loadedFrom = LoadedFrom.NETWORK;
 
-    public LoadAndDisplayMultiImageTask(List<ImageLoadingInfo> loadingInfoList, ImageLoaderEngine engine)
+    public LoadAndDisplayMultiImageTask(List<ImageServeInfo> loadingInfoList, ImageLoaderEngine engine)
     {
         this.loadingInfoList = loadingInfoList;
         this.engine = engine;
@@ -127,9 +127,9 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
     {
         waitIfPaused();
 
-        for (Iterator<ImageLoadingInfo> iterator = loadingInfoList.iterator(); iterator.hasNext(); )
+        for (Iterator<ImageServeInfo> iterator = loadingInfoList.iterator(); iterator.hasNext(); )
         {
-            ImageLoadingInfo loadingInfo = iterator.next();
+            ImageServeInfo loadingInfo = iterator.next();
 
             //Check if view has already been GC'd
             String memoryCacheKey = loadingInfo.memoryCacheKey;
@@ -216,7 +216,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         }
 
         //Matching map is used for matching image with image request
-        final SparseArray<ImageLoadingInfo> matchingMap = new SparseArray<ImageLoadingInfo>();
+        final SparseArray<ImageServeInfo> matchingMap = new SparseArray<ImageServeInfo>();
         populateMatchingMap(loadingInfoList, matchingMap);
 
         try
@@ -241,16 +241,16 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
     }
 
 
-    void populateMatchingMap(List<ImageLoadingInfo> loadingInfoList, SparseArray<ImageLoadingInfo> matchingMap)
+    void populateMatchingMap(List<ImageServeInfo> loadingInfoList, SparseArray<ImageServeInfo> matchingMap)
     {
-        for (ImageLoadingInfo loadingInfo : loadingInfoList)
+        for (ImageServeInfo loadingInfo : loadingInfoList)
             matchingMap.put(loadingInfo.imageServeParams.hashCode(), loadingInfo);
     }
 
-    private String convertToJsonString(List<ImageLoadingInfo> loadingInfoList) throws JSONException
+    private String convertToJsonString(List<ImageServeInfo> loadingInfoList) throws JSONException
     {
         Map<String, Map<String, String>> map = new TreeMap<String, Map<String, String>>();
-        for (ImageLoadingInfo loadingInfo : loadingInfoList)
+        for (ImageServeInfo loadingInfo : loadingInfoList)
         {
             Map<String, String> params = loadingInfo.imageServeParams;
             String key = params.get("key");
@@ -275,14 +275,14 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
     }
 
 
-    private void displayBitmapTask(Bitmap bitmap, ImageLoadingInfo loadingInfo)
+    private void displayBitmapTask(Bitmap bitmap, ImageServeInfo loadingInfo)
     {
         DisplayBitmapTask displayBitmapTask = new DisplayBitmapTask(bitmap, loadingInfo, engine, loadedFrom);
         displayBitmapTask.setLoggingEnabled(writeLogs);
         runTask(displayBitmapTask, loadingInfo.options.isSyncLoading(), loadingInfo.options.getHandler(), engine);
     }
 
-    private Bitmap tryLoadBitmapFromDisk(ImageLoadingInfo loadingInfo) throws TaskCancelledException
+    private Bitmap tryLoadBitmapFromDisk(ImageServeInfo loadingInfo) throws TaskCancelledException
     {
         File imageFile = configuration.diskCache.get(loadingInfo.uri);
 
@@ -327,7 +327,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
     }
 
 
-    private void downloadImages(final String uri, String requestsJson, final SparseArray<ImageLoadingInfo> matchingMap) throws IOException
+    private void downloadImages(final String uri, String requestsJson, final SparseArray<ImageServeInfo> matchingMap) throws IOException
     {
         final DownloadExtra downloadExtra = new DownloadExtra();
         downloadExtra.setHeader("Accept", ACCEPT_HEADER);
@@ -372,7 +372,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         }
     }
 
-    void displayImage(byte[] imageBinary, ImageLoadingInfo loadingInfo) throws IOException
+    void displayImage(byte[] imageBinary, ImageServeInfo loadingInfo) throws IOException
     {
         File imageFile = configuration.diskCache.get(loadingInfo.uri);
         String cacheFileUri = ImageDownloader.Scheme.FILE.wrap(imageFile.getAbsolutePath());
@@ -489,7 +489,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         return saved;
     }
 
-    private void fireFailEvent(final FailReason.FailType failType, final Throwable failCause, final ImageLoadingInfo loadingInfo)
+    private void fireFailEvent(final FailReason.FailType failType, final Throwable failCause, final ImageServeInfo loadingInfo)
     {
         if (loadingInfo.options.isSyncLoading() || isTaskInterrupted() || isTaskNotActual(loadingInfo.imageAware, loadingInfo.memoryCacheKey))
             return;
@@ -508,7 +508,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         runTask(r, false, loadingInfo.options.getHandler(), engine);
     }
 
-    private void fireCancelEvent(final ImageLoadingInfo loadingInfo)
+    private void fireCancelEvent(final ImageServeInfo loadingInfo)
     {
         if (loadingInfo.options.isSyncLoading() || isTaskInterrupted()) return;
         Runnable r = new Runnable()
@@ -523,9 +523,9 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
     }
 
 
-    private void fireCancelEvent(final List<ImageLoadingInfo> loadingInfoList)
+    private void fireCancelEvent(final List<ImageServeInfo> loadingInfoList)
     {
-        for (ImageLoadingInfo imageLoadingInfo : loadingInfoList)
+        for (ImageServeInfo imageLoadingInfo : loadingInfoList)
             fireCancelEvent(imageLoadingInfo);
     }
 

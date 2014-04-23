@@ -20,7 +20,6 @@ import com.nostra13.universalimageloader.core.imageaware.ImageAware;
 import com.nostra13.universalimageloader.core.listener.ImageLoadingListener;
 import com.nostra13.universalimageloader.core.listener.ImageLoadingProgressListener;
 
-import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -33,7 +32,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @see com.nostra13.universalimageloader.core.listener.ImageLoadingProgressListener
  * @since 1.3.1
  */
-final class ImageLoadingInfo {
+class ImageLoadingInfo {
 
 	final String uri;
 	final String memoryCacheKey;
@@ -43,12 +42,11 @@ final class ImageLoadingInfo {
 	final ImageLoadingListener listener;
 	final ImageLoadingProgressListener progressListener;
 	final ReentrantLock loadFromUriLock;
-    final Map<String, String> imageServeParams;
 
 
     public ImageLoadingInfo(String uri, ImageAware imageAware, ImageSize targetSize, String memoryCacheKey,
                             DisplayImageOptions options, ImageLoadingListener listener,
-                            ImageLoadingProgressListener progressListener, ReentrantLock loadFromUriLock, Map<String, String> imageServeParams)
+                            ImageLoadingProgressListener progressListener, ReentrantLock loadFromUriLock)
     {
         this.uri = uri;
         this.imageAware = imageAware;
@@ -58,13 +56,5 @@ final class ImageLoadingInfo {
         this.progressListener = progressListener;
         this.loadFromUriLock = loadFromUriLock;
         this.memoryCacheKey = memoryCacheKey;
-        this.imageServeParams = imageServeParams;
-    }
-
-    public ImageLoadingInfo(String uri, ImageAware imageAware, ImageSize targetSize, String memoryCacheKey,
-                            DisplayImageOptions options, ImageLoadingListener listener,
-                            ImageLoadingProgressListener progressListener, ReentrantLock loadFromUriLock)
-    {
-        this(uri, imageAware, targetSize, memoryCacheKey, options, listener, progressListener, loadFromUriLock, null);
     }
 }
