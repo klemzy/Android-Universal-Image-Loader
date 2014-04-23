@@ -343,7 +343,8 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
             }
         });
 
-        List<BodyPart> bodyParts = MultipartParser.parse(getDownloader().getStream(uri, downloadExtra), contentType);
+        MultipartParser parser = new MultipartParser(getDownloader().getStream(uri, downloadExtra), contentType);
+        List<BodyPart> bodyParts = parser.parse();
         for (BodyPart bodyPart : bodyParts)
         {
             Map<String, String> perImageParams = new TreeMap<String, String>();

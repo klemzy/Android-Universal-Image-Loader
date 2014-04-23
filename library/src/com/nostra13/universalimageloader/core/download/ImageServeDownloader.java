@@ -56,6 +56,10 @@ public class ImageServeDownloader extends BaseImageDownloader
             IoUtils.readAndCloseStream(conn.getErrorStream());
             throw e;
         }
+
+        if(downloadExtra.getListener() != null)
+            downloadExtra.getListener().onConnected(conn);
+
         return new ContentLengthInputStream(new BufferedInputStream(imageStream, BUFFER_SIZE), conn.getContentLength());
     }
 

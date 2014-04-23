@@ -14,6 +14,16 @@ import java.util.List;
 public class MultipartParser
 {
 
+    private InputStream inputStream;
+
+    private String contentType;
+
+    public MultipartParser(InputStream inputStream, String contentType)
+    {
+        this.inputStream = inputStream;
+        this.contentType = contentType;
+    }
+
     /**
      * Parse the InputStream from our DataSource, constructing the
      * appropriate MimeBodyParts.  The <code>parsed</code> flag is
@@ -23,23 +33,16 @@ public class MultipartParser
      *
      * @since JavaMail 1.2
      */
-       /*
-        * Boyer-Moore version of parser.  Keep both versions around
-        * until we're sure this new one works.
-        */
-    public static synchronized List<BodyPart> parse(InputStream in, String contentType) throws IOException
+    public synchronized List<BodyPart> parse() throws IOException
     {
-        String preamble = null;
         boolean complete = true;
         List<BodyPart> bodyParts = new ArrayList<BodyPart>();
 
-        long start = 0, end = 0;
-
         try
         {
-            if (!(in instanceof ByteArrayInputStream) &&
-                    !(in instanceof BufferedInputStream))
-                in = new BufferedInputStream(in);
+            if (!(inputStream instanceof ByteArrayInputStream) &&
+                    !(inputStream instanceof BufferedInputStream))
+                inputStream = new BufferedInputStream(inputStream);
         }
         catch (Exception ex)
         {
@@ -54,7 +57,7 @@ public class MultipartParser
         try
         {
             // Skip and save the preamble
-            LineInputStream lin = new LineInputStream(in);
+            LineInputStream lin = new LineInputStream(inputStream);
             StringBuffer preamblesb = null;
             String line;
             String lineSeparator = null;
@@ -63,7 +66,7 @@ public class MultipartParser
                 /*
                 * Strip trailing whitespace.  Can't use trim method
                 * because it's too aggressive.  Some bogus MIME
-                * messages will include control characters in the
+                * messages will include control characters inputStream the
                 * boundary string.
                 */
                 int i;
@@ -117,10 +120,6 @@ public class MultipartParser
                 }
             }
 
-
-            if (preamblesb != null)
-                preamble = preamblesb.toString();
-
             // save individual boundary bytes for comparison later
             byte[] bndbytes = ASCIIUtility.getBytes(boundary);
             int bl = bndbytes.length;
@@ -168,9 +167,9 @@ public class MultipartParser
             getparts:
             while (!done)
             {
-                InternetHeaders headers = createInternetHeaders(in);
+                InternetHeaders headers = createInternetHeaders(inputStream);
 
-                if (!in.markSupported())
+                if (!inputStream.markSupported())
                     throw new IOException("Stream doesn't support mark");
 
                 ByteArrayOutputStream buf = new ByteArrayOutputStream();
@@ -188,19 +187,19 @@ public class MultipartParser
                 //	 over a larger buffer
                 byte[] inbuf = new byte[bl];
                 byte[] previnbuf = new byte[bl];
-                int inSize = 0;        // number of valid bytes in inbuf
-                int prevSize = 0;    // number of valid bytes in previnbuf
+                int inSize = 0;        // number of valid bytes inputStream inbuf
+                int prevSize = 0;    // number of valid bytes inputStream previnbuf
                 int eolLen;
                 boolean first = true;
 
                 /*
-                 * Read and save the content bytes in buf.
+                 * Read and save the content bytes inputStream buf.
                  */
                 for (; ; )
                 {
-                    in.mark(bl + 4 + 1000); // bnd + "--\r\n" + lots of LWSP
+                    inputStream.mark(bl + 4 + 1000); // bnd + "--\r\n" + lots of LWSP
                     eolLen = 0;
-                    inSize = readFully(in, inbuf, 0, bl);
+                    inSize = readFully(inputStream, inbuf, 0, bl);
                     if (inSize < bl)
                     {
                         complete = false;
@@ -236,10 +235,10 @@ public class MultipartParser
                         if (first || eolLen > 0)
                         {
                             // matched the boundary, check for last boundary
-                            int b2 = in.read();
+                            int b2 = inputStream.read();
                             if (b2 == '-')
                             {
-                                if (in.read() == '-')
+                                if (inputStream.read() == '-')
                                 {
                                     complete = true;
                                     done = true;
@@ -248,15 +247,15 @@ public class MultipartParser
                             }
                             // skip linear whitespace
                             while (b2 == ' ' || b2 == '\t')
-                                b2 = in.read();
+                                b2 = inputStream.read();
                             // check for end of line
                             if (b2 == '\n')
                                 break;    // got it!  break out of the loop
                             if (b2 == '\r')
                             {
-                                in.mark(1);
-                                if (in.read() != '\n')
-                                    in.reset();
+                                inputStream.mark(1);
+                                if (inputStream.read() != '\n')
+                                    inputStream.reset();
                                 break;    // got it!  break out of the loop
                             }
                         }
@@ -279,8 +278,8 @@ public class MultipartParser
                         // first, write out bytes we're done with
                         if (prevSize > 1)
                             buf.write(previnbuf, 0, prevSize - 1);
-                        in.reset();
-                        skipFully(in, 1);
+                        inputStream.reset();
+                        skipFully(inputStream, 1);
                         if (prevSize >= 1)
                         {    // is there a byte to save?
                             // yes, save one from previous and one from current
@@ -301,10 +300,10 @@ public class MultipartParser
                         // we dump it
                         if (prevSize > 0)
                             buf.write(previnbuf, 0, prevSize);
-                        // all the bytes we're skipping are saved in previnbuf
+                        // all the bytes we're skipping are saved inputStream previnbuf
                         prevSize = skip;
-                        in.reset();
-                        skipFully(in, prevSize);
+                        inputStream.reset();
+                        skipFully(inputStream, prevSize);
                         // swap buffers
                         byte[] tmp = inbuf;
                         inbuf = previnbuf;
@@ -336,7 +335,7 @@ public class MultipartParser
         {
             try
             {
-                in.close();
+                inputStream.close();
             }
             catch (IOException cex)
             {
@@ -361,7 +360,7 @@ public class MultipartParser
      * @return -1 on EOF, otherwise number of bytes read
      * @throws java.io.IOException on I/O errors
      */
-    private static int readFully(InputStream in, byte[] buf, int off, int len)
+    int readFully(InputStream in, byte[] buf, int off, int len)
             throws IOException
     {
         if (len == 0)
@@ -383,7 +382,7 @@ public class MultipartParser
      * Skip the specified number of bytes, repeatedly calling
      * the skip method as necessary.
      */
-    static void skipFully(InputStream in, long offset) throws IOException
+    void skipFully(InputStream in, long offset) throws IOException
     {
         while (offset > 0)
         {
@@ -394,7 +393,7 @@ public class MultipartParser
         }
     }
 
-    static InternetHeaders createInternetHeaders(InputStream is)
+    InternetHeaders createInternetHeaders(InputStream is)
             throws IOException
     {
         return new InternetHeaders(is);
