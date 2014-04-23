@@ -41,7 +41,7 @@ import com.nostra13.universalimageloader.utils.MemoryCacheUtils;
  * @author Sergey Tarasevich (nostra13[at]gmail[dot]com)
  * @since 1.0.0
  */
-class ImageLoader
+public class ImageLoader
 {
 
     public static final String TAG = ImageLoader.class.getSimpleName();

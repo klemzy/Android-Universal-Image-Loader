@@ -51,7 +51,7 @@ public class ImageServe extends ImageLoader
     {
         checkConfiguration();
 
-        List<ImageLoadingInfo> loadingInfoList = new ArrayList<ImageLoadingInfo>();
+        List<ImageServeInfo> loadingInfoList = new ArrayList<ImageServeInfo>();
         for (ImageRequest request : displayRequests)
         {
             ImageAware imageAware = request.getImageAware();
@@ -151,7 +151,7 @@ public class ImageServe extends ImageLoader
 
     }
 
-    private void dispatchMultiGetTask(List<ImageLoadingInfo> loadingInfoList, boolean synchronous)
+    private void dispatchMultiGetTask(List<ImageServeInfo> loadingInfoList, boolean synchronous)
     {
         LoadAndDisplayMultiImageTask displayTask = new LoadAndDisplayMultiImageTask(loadingInfoList, engine);
         if (synchronous)
