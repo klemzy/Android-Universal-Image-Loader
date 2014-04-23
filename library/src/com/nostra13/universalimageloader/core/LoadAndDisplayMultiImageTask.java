@@ -5,6 +5,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.SparseArray;
 import com.nostra13.universalimageloader.cache.disc.DiscCacheAware;
+import com.nostra13.universalimageloader.cache.disc.DiskCache;
 import com.nostra13.universalimageloader.core.assist.*;
 import com.nostra13.universalimageloader.core.decode.ImageDecoder;
 import com.nostra13.universalimageloader.core.decode.ImageDecodingInfo;
@@ -384,7 +385,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         boolean cachedToDisc;
         try
         {
-            cachedToDisc = loadingInfo.options.isCacheOnDisc() && tryCacheImageOnDisc(loadingInfo, imageFile, imageBinary);
+            cachedToDisc = loadingInfo.options.isCacheOnDisk() && tryCacheImageOnDisc(loadingInfo, imageFile, imageBinary);
         }
         catch (TaskCancelledException e)
         {
@@ -431,7 +432,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
 
     private File getImageFileInDiscCache(String uri)
     {
-        DiscCacheAware discCache = configuration.discCache;
+        DiskCache discCache = configuration.diskCache;
         File imageFile = discCache.get(uri);
         File cacheDir = imageFile.getParentFile();
         if (cacheDir == null || (!cacheDir.exists() && !cacheDir.mkdirs()))
@@ -456,15 +457,15 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
             loaded = saveImageToDisc(targetFile, imageData);
             if (loaded)
             {
-                int width = configuration.maxImageWidthForDiscCache;
-                int height = configuration.maxImageHeightForDiscCache;
+                int width = configuration.maxImageWidthForDiskCache;
+                int height = configuration.maxImageHeightForDiskCache;
                 if (width > 0 || height > 0)
                 {
                     log(LOG_RESIZE_CACHED_IMAGE_FILE);
                     loaded = resizeAndSaveImage(loadingInfo, targetFile, width, height); // TODO : process boolean result
                 }
 
-                configuration.discCache.put(loadingInfo.uri, targetFile);
+                configuration.diskCache.put(loadingInfo.uri, targetFile);
             }
         }
         catch (IOException e)
@@ -518,10 +519,10 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
                 getDownloader(), specialOptions);
 
         Bitmap bmp = decoder.decode(decodingInfo);
-        if (bmp != null && configuration.processorForDiscCache != null)
+        if (bmp != null && configuration.processorForDiskCache != null)
         {
             log(LOG_PROCESS_IMAGE_BEFORE_CACHE_ON_DISC);
-            bmp = configuration.processorForDiscCache.process(bmp);
+            bmp = configuration.processorForDiskCache.process(bmp);
             if (bmp == null)
             {
                 L.e(ERROR_PROCESSOR_FOR_DISC_CACHE_NULL, loadingInfo.memoryCacheKey);
