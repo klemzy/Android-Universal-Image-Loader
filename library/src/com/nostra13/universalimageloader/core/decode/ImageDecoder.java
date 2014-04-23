@@ -36,4 +36,6 @@ public interface ImageDecoder {
 	 * @throws IOException
 	 */
 	Bitmap decode(ImageDecodingInfo imageDecodingInfo) throws IOException;
+
+    Bitmap decode(ImageDecodingInfo imageDecodingInfo, byte[] data) throws IOException;
 }

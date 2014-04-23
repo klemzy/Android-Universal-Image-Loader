@@ -4,8 +4,6 @@ import android.graphics.Bitmap;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.SparseArray;
-import com.nostra13.universalimageloader.cache.disc.DiscCacheAware;
-import com.nostra13.universalimageloader.cache.disc.DiskCache;
 import com.nostra13.universalimageloader.core.assist.*;
 import com.nostra13.universalimageloader.core.decode.ImageDecoder;
 import com.nostra13.universalimageloader.core.decode.ImageDecodingInfo;
@@ -75,7 +73,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
 
     private static final String LOG_CACHE_IMAGE_ON_DISC = "Cache image on disc [%s]";
 
-    private static final String LOG_PROCESS_IMAGE_BEFORE_CACHE_ON_DISC = "Process image before cache on disc [%s]";
+    private static final String LOG_PROCESS_IMAGE_BEFORE_CACHE_ON_DISK = "Process image before cache on disc [%s]";
 
     private static final String LOG_TASK_CANCELLED_IMAGEAWARE_REUSED = "ImageAware is reused for another image. Task is cancelled. [%s]";
 
@@ -87,7 +85,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
 
     private static final String ERROR_POST_PROCESSOR_NULL = "Post-processor returned null [%s]";
 
-    private static final String ERROR_PROCESSOR_FOR_DISC_CACHE_NULL = "Bitmap processor for disc cache returned null [%s]";
+    private static final String ERROR_PROCESSOR_FOR_DISK_CACHE_NULL = "Bitmap processor for disc cache returned null [%s]";
 
     private static final int BUFFER_SIZE = 32 * 1024; // 32 Kb
 
@@ -163,7 +161,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
                 bmp = configuration.memoryCache.get(memoryCacheKey);
                 if (bmp == null)
                 {
-                    bmp = tryLoadBitmapFromDisc(loadingInfo);
+                    bmp = tryLoadBitmapFromDisK(loadingInfo);
                     if (bmp == null) continue;
 
                     if (isTaskNotActual(loadingInfo.imageAware, memoryCacheKey)) continue;
@@ -287,9 +285,9 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         runTask(displayBitmapTask, loadingInfo.options.isSyncLoading(), loadingInfo.options.getHandler(), engine);
     }
 
-    private Bitmap tryLoadBitmapFromDisc(ImageLoadingInfo loadingInfo) throws TaskCancelledException
+    private Bitmap tryLoadBitmapFromDisK(ImageLoadingInfo loadingInfo) throws TaskCancelledException
     {
-        File imageFile = getImageFileInDiscCache(loadingInfo.uri);
+        File imageFile = configuration.diskCache.get(loadingInfo.uri);
 
         Bitmap bitmap = null;
         try
@@ -379,13 +377,13 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
 
     void displayImage(byte[] imageBinary, ImageLoadingInfo loadingInfo) throws IOException
     {
-        File imageFile = getImageFileInDiscCache(loadingInfo.uri);
+        File imageFile = configuration.diskCache.get(loadingInfo.uri);
         String cacheFileUri = ImageDownloader.Scheme.FILE.wrap(imageFile.getAbsolutePath());
 
         boolean cachedToDisc;
         try
         {
-            cachedToDisc = loadingInfo.options.isCacheOnDisk() && tryCacheImageOnDisc(loadingInfo, imageFile, imageBinary);
+            cachedToDisc = loadingInfo.options.isCacheOnDisk() && tryCacheImageOnDisk(loadingInfo, imageFile, imageBinary);
         }
         catch (TaskCancelledException e)
         {
@@ -430,24 +428,8 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         return decoder.decode(decodingInfo);
     }
 
-    private File getImageFileInDiscCache(String uri)
-    {
-        DiskCache discCache = configuration.diskCache;
-        File imageFile = discCache.get(uri);
-        File cacheDir = imageFile.getParentFile();
-        if (cacheDir == null || (!cacheDir.exists() && !cacheDir.mkdirs()))
-        {
-            imageFile = configuration.reserveDiscCache.get(uri);
-            cacheDir = imageFile.getParentFile();
-            if (cacheDir != null && !cacheDir.exists())
-            {
-                cacheDir.mkdirs();
-            }
-        }
-        return imageFile;
-    }
 
-    private boolean tryCacheImageOnDisc(ImageLoadingInfo loadingInfo, File targetFile, byte[] imageData) throws TaskCancelledException
+    private boolean tryCacheImageOnDisk(ImageLoadingInfo loadingInfo, File targetFile, byte[] imageData) throws TaskCancelledException
     {
         log(LOG_CACHE_IMAGE_ON_DISC);
 
@@ -462,10 +444,8 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
                 if (width > 0 || height > 0)
                 {
                     log(LOG_RESIZE_CACHED_IMAGE_FILE);
-                    loaded = resizeAndSaveImage(loadingInfo, targetFile, width, height); // TODO : process boolean result
+                    loaded = resizeAndSaveImage(loadingInfo, width, height); // TODO : process boolean result
                 }
-
-                configuration.diskCache.put(loadingInfo.uri, targetFile);
             }
         }
         catch (IOException e)
@@ -506,44 +486,36 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
     /**
      * Decodes image file into Bitmap, resize it and save it back
      */
-    private boolean resizeAndSaveImage(ImageLoadingInfo loadingInfo, File targetFile, int maxWidth, int maxHeight) throws IOException
+    private boolean resizeAndSaveImage(ImageLoadingInfo loadingInfo, int maxWidth, int maxHeight) throws IOException
     {
         boolean saved = false;
-        // Decode image file, compress and re-save it
-        ImageSize targetImageSize = new ImageSize(maxWidth, maxHeight);
-        DisplayImageOptions specialOptions = new DisplayImageOptions.Builder().cloneFrom(loadingInfo.options)
-                .imageScaleType(ImageScaleType.IN_SAMPLE_INT).build();
-
-        ImageDecodingInfo decodingInfo = new ImageDecodingInfo(loadingInfo.memoryCacheKey,
-                ImageDownloader.Scheme.FILE.wrap(targetFile.getAbsolutePath()), loadingInfo.uri, targetImageSize, ViewScaleType.FIT_INSIDE,
-                getDownloader(), specialOptions);
-
-        Bitmap bmp = decoder.decode(decodingInfo);
-        if (bmp != null && configuration.processorForDiskCache != null)
+        File targetFile = configuration.diskCache.get(loadingInfo.uri);
+        if (targetFile != null && targetFile.exists())
         {
-            log(LOG_PROCESS_IMAGE_BEFORE_CACHE_ON_DISC);
-            bmp = configuration.processorForDiskCache.process(bmp);
-            if (bmp == null)
+            ImageSize targetImageSize = new ImageSize(maxWidth, maxHeight);
+            DisplayImageOptions specialOptions = new DisplayImageOptions.Builder().cloneFrom(loadingInfo.options)
+                    .imageScaleType(ImageScaleType.IN_SAMPLE_INT).build();
+            ImageDecodingInfo decodingInfo = new ImageDecodingInfo(loadingInfo.memoryCacheKey,
+                    ImageDownloader.Scheme.FILE.wrap(targetFile.getAbsolutePath()), loadingInfo.uri, targetImageSize, ViewScaleType.FIT_INSIDE,
+                    getDownloader(), specialOptions);
+            Bitmap bmp = decoder.decode(decodingInfo);
+            if (bmp != null && configuration.processorForDiskCache != null)
             {
-                L.e(ERROR_PROCESSOR_FOR_DISC_CACHE_NULL, loadingInfo.memoryCacheKey);
+                log(LOG_PROCESS_IMAGE_BEFORE_CACHE_ON_DISK);
+                bmp = configuration.processorForDiskCache.process(bmp);
+                if (bmp == null)
+                {
+                    L.e(ERROR_PROCESSOR_FOR_DISK_CACHE_NULL, loadingInfo.memoryCacheKey);
+                }
+            }
+            if (bmp != null)
+            {
+                saved = configuration.diskCache.save(loadingInfo.uri, bmp);
+                bmp.recycle();
             }
         }
 
-        if (bmp != null)
-        {
-            OutputStream os = new BufferedOutputStream(new FileOutputStream(targetFile), BUFFER_SIZE);
-            try
-            {
-                bmp.compress(configuration.imageCompressFormatForDiscCache, configuration.imageQualityForDiscCache, os);
-            }
-            finally
-            {
-                IoUtils.closeSilently(os);
-            }
-            bmp.recycle();
-        }
-
-        return true;
+        return saved;
     }
 
     private void fireFailEvent(final FailReason.FailType failType, final Throwable failCause, final ImageLoadingInfo loadingInfo)
