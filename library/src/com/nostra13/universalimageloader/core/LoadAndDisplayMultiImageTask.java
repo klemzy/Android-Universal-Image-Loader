@@ -87,9 +87,6 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
 
     private static final String ERROR_PROCESSOR_FOR_DISK_CACHE_NULL = "Bitmap processor for disc cache returned null [%s]";
 
-    private static final int BUFFER_SIZE = 32 * 1024; // 32 Kb
-
-
     private final List<ImageLoadingInfo> loadingInfoList;
 
     private final ImageLoaderEngine engine;
