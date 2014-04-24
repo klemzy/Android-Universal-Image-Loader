@@ -2,7 +2,6 @@ package com.nostra13.universalimageloader.core;
 
 import android.graphics.Bitmap;
 import android.os.Handler;
-import android.os.Looper;
 import android.util.SparseArray;
 import com.nostra13.universalimageloader.core.assist.*;
 import com.nostra13.universalimageloader.core.decode.ImageDecoder;
@@ -21,13 +20,13 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URLEncoder;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -101,6 +100,8 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
 
     private final ImageDecoder decoder;
 
+    private final Handler handler;
+
     private final boolean writeLogs;
 
     private String contentType;
@@ -108,7 +109,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
 
     private LoadedFrom loadedFrom = LoadedFrom.NETWORK;
 
-    public LoadAndDisplayMultiImageTask(List<ImageServeInfo> loadingInfoList, ImageLoaderEngine engine)
+    public LoadAndDisplayMultiImageTask(List<ImageServeInfo> loadingInfoList, ImageLoaderEngine engine, Handler handler)
     {
         this.loadingInfoList = loadingInfoList;
         this.engine = engine;
@@ -119,6 +120,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         this.slowNetworkDownloader = configuration.slowNetworkDownloader;
         this.decoder = configuration.decoder;
         this.writeLogs = configuration.writeLogs;
+        this.handler = handler;
 
     }
 
@@ -215,6 +217,12 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
             }
         }
 
+        if (loadingInfoList.size() == 0)
+        {
+            L.i("No images to download with multipart/mixed");
+            return;
+        }
+
         //Matching map is used for matching image with image request
         final SparseArray<ImageServeInfo> matchingMap = new SparseArray<ImageServeInfo>();
         populateMatchingMap(loadingInfoList, matchingMap);
@@ -247,7 +255,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
             matchingMap.put(loadingInfo.imageServeParams.hashCode(), loadingInfo);
     }
 
-    private String convertToJsonString(List<ImageServeInfo> loadingInfoList) throws JSONException
+    String convertToJsonString(List<ImageServeInfo> loadingInfoList) throws JSONException
     {
         Map<String, Map<String, String>> map = new TreeMap<String, Map<String, String>>();
         for (ImageServeInfo loadingInfo : loadingInfoList)
@@ -279,7 +287,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
     {
         DisplayBitmapTask displayBitmapTask = new DisplayBitmapTask(bitmap, loadingInfo, engine, loadedFrom);
         displayBitmapTask.setLoggingEnabled(writeLogs);
-        runTask(displayBitmapTask, loadingInfo.options.isSyncLoading(), loadingInfo.options.getHandler(), engine);
+        runTask(displayBitmapTask, loadingInfo.options.isSyncLoading(), handler, engine);
     }
 
     private Bitmap tryLoadBitmapFromDisk(ImageServeInfo loadingInfo) throws TaskCancelledException
@@ -345,31 +353,67 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
 
         MultipartParser parser = new MultipartParser(getDownloader().getStream(uri, downloadExtra), contentType);
         List<BodyPart> bodyParts = parser.parse();
+
         for (BodyPart bodyPart : bodyParts)
         {
             Map<String, String> perImageParams = new TreeMap<String, String>();
 
             InternetHeaders headers = bodyPart.getHeaders();
             String[] contentType = headers.getHeader("Content-Type");
-            if (contentType == null)
-                continue;
 
-            String[] params = contentType[0].split(";");
-            for (String param : params)
+            //Handle case when parser returns empty body part
+            if (contentType == null || contentType.length == 0)
             {
-                String[] paramNameValue = param.split("=");
-                if (paramNameValue.length == 1)
-                {
-                    String imageFormat = paramNameValue[0].split("/")[1];
-                    perImageParams.put("out", imageFormat);
-                }
-                else
-                {
-                    perImageParams.put(paramNameValue[0], paramNameValue[1]);
-                }
+                L.e("Empty Content-Type header");
+                continue;
             }
 
-            displayImage(bodyPart.getData(), matchingMap.get(perImageParams.hashCode()));
+            String[] params = contentType[0].split(";");
+
+            boolean error = false;
+            for (String param : params)
+            {
+                if (param.equals("error"))
+                {
+                    error = true;
+                }
+                else if (param.contains(ImageFormat.JPEG.toString()))
+                {
+                    perImageParams.put("out", ImageFormat.JPEG.toString());
+                }
+                else if (param.contains(ImageFormat.PNG.toString()))
+                {
+                    perImageParams.put("out", ImageFormat.PNG.toString());
+                }
+                else if (param.contains(ImageFormat.WEBP.toString()))
+                {
+                    perImageParams.put("out", ImageFormat.WEBP.toString());
+                }
+                else if (param.contains("="))
+                {
+                    String[] paramNameValue = param.split("=");
+                    if (paramNameValue.length == 2)
+                        perImageParams.put(paramNameValue[0], paramNameValue[1]);
+                }
+
+            }
+
+            if (error)
+            {
+                L.e("Multipart response for params " + contentType[0] + " contained error");
+                continue;
+            }
+
+            int hashCode = perImageParams.hashCode();
+            ImageServeInfo info = matchingMap.get(hashCode);
+
+            if (info == null)
+            {
+                L.e("Unable to match image response with corresponding image request");
+                continue;
+            }
+
+            displayImage(bodyPart.getData(), info);
         }
     }
 
@@ -405,7 +449,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
 
         DisplayBitmapTask displayBitmapTask = new DisplayBitmapTask(bitmap, loadingInfo, engine, loadedFrom);
         displayBitmapTask.setLoggingEnabled(writeLogs);
-        runTask(displayBitmapTask, loadingInfo.options.isSyncLoading(), new Handler(Looper.getMainLooper()), engine);
+        runTask(displayBitmapTask, loadingInfo.options.isSyncLoading(), handler, engine);
     }
 
     private Bitmap decodeImage(ImageLoadingInfo loadingInfo, byte[] imageData) throws IOException
@@ -506,7 +550,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
                 loadingInfo.listener.onLoadingFailed(loadingInfo.uri, loadingInfo.imageAware.getWrappedView(), new FailReason(failType, failCause));
             }
         };
-        runTask(r, false, loadingInfo.options.getHandler(), engine);
+        runTask(r, false, handler, engine);
     }
 
     private void fireCancelEvent(final ImageServeInfo loadingInfo)
@@ -520,7 +564,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
                 loadingInfo.listener.onLoadingCancelled(loadingInfo.uri, loadingInfo.imageAware.getWrappedView());
             }
         };
-        runTask(r, false, loadingInfo.options.getHandler(), engine);
+        runTask(r, false, handler, engine);
     }
 
 

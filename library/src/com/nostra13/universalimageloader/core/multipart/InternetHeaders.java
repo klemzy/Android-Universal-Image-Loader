@@ -588,6 +588,4 @@ public class InternetHeaders {
     public Enumeration getNonMatchingHeaderLines(String[] names) {
 	return (new matchEnum(headers, names, false, true));
     }
-
-
 }

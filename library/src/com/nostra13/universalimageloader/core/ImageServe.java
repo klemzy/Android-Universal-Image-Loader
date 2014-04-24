@@ -1,6 +1,8 @@
 package com.nostra13.universalimageloader.core;
 
 import android.graphics.Bitmap;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 import com.nostra13.universalimageloader.core.assist.ImageRequest;
 import com.nostra13.universalimageloader.core.assist.ImageSize;
@@ -14,6 +16,7 @@ import com.nostra13.universalimageloader.utils.MemoryCacheUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * IntelliJ IDEA.
@@ -23,6 +26,7 @@ import java.util.List;
  */
 public class ImageServe extends ImageLoader
 {
+
     protected volatile static ImageServe instance;
 
     /**
@@ -47,9 +51,11 @@ public class ImageServe extends ImageLoader
     {
     }
 
-    public void displayMultipleImage(List<ImageRequest> displayRequests, boolean synchronous)
+    public void displayMultipleImage(Set<ImageRequest> displayRequests, boolean synchronous)
     {
         checkConfiguration();
+
+        L.i("Display " + displayRequests.size() + " images");
 
         List<ImageServeInfo> loadingInfoList = new ArrayList<ImageServeInfo>();
         for (ImageRequest request : displayRequests)
@@ -133,19 +139,35 @@ public class ImageServe extends ImageLoader
             }
         }
 
-        if (loadingInfoList.size() < 20)
+        if (loadingInfoList.size() < 20 && loadingInfoList.size() > 0)
         {
+            L.i("Dispatched multi image task with " + loadingInfoList.size() + " images");
             dispatchMultiGetTask(loadingInfoList, synchronous);
         }
         else
         {
             //Only 18 per multi get request should be sent
+            List<ImageServeInfo> list = new ArrayList<ImageServeInfo>();
             for (int i = 0; i < loadingInfoList.size(); i++)
             {
                 if (i % 18 == 0)
                 {
-                    dispatchMultiGetTask(loadingInfoList.subList(i, i + 18), synchronous);
+                    if (list.size() > 0)
+                    {
+                        L.i("Dispatched multi image task with " + list.size() + " images");
+                        dispatchMultiGetTask(list, synchronous);
+                    }
+
+                    list = new ArrayList<ImageServeInfo>();
                 }
+
+                list.add(loadingInfoList.get(i));
+            }
+
+            if (list.size() > 0)
+            {
+                L.i("Dispatched multi image task with " + list.size() + " images");
+                dispatchMultiGetTask(list, synchronous);
             }
         }
 
@@ -153,7 +175,7 @@ public class ImageServe extends ImageLoader
 
     private void dispatchMultiGetTask(List<ImageServeInfo> loadingInfoList, boolean synchronous)
     {
-        LoadAndDisplayMultiImageTask displayTask = new LoadAndDisplayMultiImageTask(loadingInfoList, engine);
+        LoadAndDisplayMultiImageTask displayTask = new LoadAndDisplayMultiImageTask(loadingInfoList, engine, defineHandler(synchronous));
         if (synchronous)
         {
             displayTask.run();
@@ -162,5 +184,16 @@ public class ImageServe extends ImageLoader
         {
             engine.submit(displayTask);
         }
+    }
+
+    protected static Handler defineHandler(boolean synchronous)
+    {
+        Handler handler = null;
+        if (!synchronous && Looper.myLooper() == Looper.getMainLooper())
+        {
+            handler = new Handler(Looper.getMainLooper());
+        }
+
+        return handler;
     }
 }

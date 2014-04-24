@@ -13,11 +13,6 @@ public class BodyPart
 
     private byte[] data;
 
-    public BodyPart(byte[] data)
-    {
-        this.data = data;
-    }
-
     public BodyPart(InternetHeaders headers, byte[] data)
     {
         this.headers = headers;

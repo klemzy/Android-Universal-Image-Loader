@@ -1,6 +1,9 @@
 package com.nostra13.universalimageloader.core.multipart;
 
 
+import android.annotation.TargetApi;
+import android.os.Build;
+
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,7 +16,6 @@ import java.util.List;
  */
 public class MultipartParser
 {
-
     private InputStream inputStream;
 
     private String contentType;
@@ -33,20 +35,16 @@ public class MultipartParser
      *
      * @since JavaMail 1.2
      */
+    @TargetApi(Build.VERSION_CODES.GINGERBREAD)
     public synchronized List<BodyPart> parse() throws IOException
     {
         boolean complete = true;
         List<BodyPart> bodyParts = new ArrayList<BodyPart>();
 
-        try
-        {
-            if (!(inputStream instanceof ByteArrayInputStream) &&
-                    !(inputStream instanceof BufferedInputStream))
-                inputStream = new BufferedInputStream(inputStream);
-        }
-        catch (Exception ex)
-        {
-        }
+
+        if (!(inputStream instanceof ByteArrayInputStream) &&
+                !(inputStream instanceof BufferedInputStream))
+            inputStream = new BufferedInputStream(inputStream);
 
         ContentType cType = new ContentType(contentType);
         String boundary = null;
@@ -330,6 +328,7 @@ public class MultipartParser
         }
         catch (IOException ioex)
         {
+            throw new IOException(ioex);
         }
         finally
         {

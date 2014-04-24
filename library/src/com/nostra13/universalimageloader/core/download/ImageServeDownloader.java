@@ -30,11 +30,9 @@ public class ImageServeDownloader extends BaseImageDownloader
     @Override
     protected InputStream getStreamFromNetwork(final String imageUri, final Object extra) throws IOException
     {
-        if (!(extra instanceof DownloadExtra))
-            throw new IllegalStateException("Object extra must be non NULL and instance of DownloadExtra");
-
-
-        DownloadExtra downloadExtra = (DownloadExtra) extra;
+        DownloadExtra downloadExtra = null;
+        if(extra != null && extra instanceof DownloadExtra)
+            downloadExtra = (DownloadExtra) extra;
 
         HttpURLConnection conn = createConnection(imageUri, downloadExtra);
 
@@ -57,7 +55,7 @@ public class ImageServeDownloader extends BaseImageDownloader
             throw e;
         }
 
-        if(downloadExtra.getListener() != null)
+        if(downloadExtra != null && downloadExtra.getListener() != null)
             downloadExtra.getListener().onConnected(conn);
 
         return new ContentLengthInputStream(new BufferedInputStream(imageStream, BUFFER_SIZE), conn.getContentLength());
