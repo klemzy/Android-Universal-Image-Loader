@@ -16,7 +16,6 @@ import com.nostra13.universalimageloader.utils.MemoryCacheUtils;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 /**
  * IntelliJ IDEA.
@@ -51,7 +50,7 @@ public class ImageServe extends ImageLoader
     {
     }
 
-    public void displayMultipleImage(Set<ImageRequest> displayRequests, boolean synchronous)
+    public void displayMultipleImage(List<ImageRequest> displayRequests, boolean synchronous)
     {
         checkConfiguration();
 

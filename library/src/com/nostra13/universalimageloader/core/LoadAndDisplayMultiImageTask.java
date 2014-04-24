@@ -2,7 +2,6 @@ package com.nostra13.universalimageloader.core;
 
 import android.graphics.Bitmap;
 import android.os.Handler;
-import android.util.SparseArray;
 import com.nostra13.universalimageloader.core.assist.*;
 import com.nostra13.universalimageloader.core.decode.ImageDecoder;
 import com.nostra13.universalimageloader.core.decode.ImageDecodingInfo;
@@ -26,7 +25,10 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URLEncoder;
-import java.util.*;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -157,46 +159,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
                 if (isTaskNotActual(loadingInfo.imageAware, memoryCacheKey)) continue;
                 if (isTaskInterrupted()) throw new TaskCancelledException();
 
-                bmp = configuration.memoryCache.get(memoryCacheKey);
-                if (bmp == null)
-                {
-                    bmp = tryLoadBitmapFromDisk(loadingInfo);
-                    if (bmp == null) continue;
-
-                    if (isTaskNotActual(loadingInfo.imageAware, memoryCacheKey)) continue;
-                    if (isTaskInterrupted())
-                        if (loadingInfo.options.shouldPreProcess())
-                        {
-                            log(LOG_PREPROCESS_IMAGE);
-                            bmp = loadingInfo.options.getPreProcessor().process(bmp);
-                            if (bmp == null)
-                            {
-                                L.e(ERROR_PRE_PROCESSOR_NULL, memoryCacheKey);
-                            }
-                        }
-
-                    if (bmp != null && loadingInfo.options.isCacheInMemory())
-                    {
-                        log(LOG_CACHE_IMAGE_IN_MEMORY);
-                        configuration.memoryCache.put(memoryCacheKey, bmp);
-                    }
-                }
-                else
-                {
-                    loadedFrom = LoadedFrom.MEMORY_CACHE;
-                    log(LOG_GET_IMAGE_FROM_MEMORY_CACHE_AFTER_WAITING);
-                }
-
-                if (bmp != null && loadingInfo.options.shouldPostProcess())
-                {
-                    log(LOG_POSTPROCESS_IMAGE);
-                    bmp = loadingInfo.options.getPostProcessor().process(bmp);
-                    if (bmp == null)
-                    {
-                        L.e(ERROR_POST_PROCESSOR_NULL, memoryCacheKey);
-                    }
-                }
-
+                bmp = getBitmap(loadingInfo);
 
                 if (isTaskNotActual(loadingInfo.imageAware, memoryCacheKey)) continue;
                 if (isTaskInterrupted()) throw new TaskCancelledException();
@@ -223,15 +186,12 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
             return;
         }
 
-        //Matching map is used for matching image with image request
-        final SparseArray<ImageServeInfo> matchingMap = new SparseArray<ImageServeInfo>();
-        populateMatchingMap(loadingInfoList, matchingMap);
 
         try
         {
             String imageRequests = convertToJsonString(loadingInfoList);
             String hashString = StringUtils.sha256(ACCEPT_HEADER + "#" + imageRequests);
-            downloadImages(IMAGE_URL + "?hash=" + URLEncoder.encode(hashString, "UTF-8"), imageRequests, matchingMap);
+            downloadImages(IMAGE_URL + "?hash=" + URLEncoder.encode(hashString, "UTF-8"), imageRequests);
         }
         catch (JSONException e)
         {
@@ -245,14 +205,72 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         {
             fireCancelEvent(loadingInfoList);
         }
+        catch (TaskCancelledException e)
+        {
+            fireCancelEvent(loadingInfoList);
+        }
 
     }
 
-
-    void populateMatchingMap(List<ImageServeInfo> loadingInfoList, SparseArray<ImageServeInfo> matchingMap)
+    Bitmap getBitmap(ImageServeInfo loadingInfo) throws TaskCancelledException
     {
-        for (ImageServeInfo loadingInfo : loadingInfoList)
-            matchingMap.put(loadingInfo.imageServeParams.hashCode(), loadingInfo);
+        String memoryCacheKey = loadingInfo.memoryCacheKey;
+        Bitmap bmp = configuration.memoryCache.get(memoryCacheKey);
+        if (bmp == null)
+        {
+            bmp = tryLoadBitmapFromDisk(loadingInfo);
+            if (bmp == null) return null;
+
+            if (isTaskNotActual(loadingInfo.imageAware, memoryCacheKey)) return null;
+            if (isTaskInterrupted()) throw new TaskCancelledException();
+
+            tryPreprocessBitmap(bmp, loadingInfo);
+            tryCacheBitmapInMemory(bmp, loadingInfo);
+        }
+        else
+        {
+            loadedFrom = LoadedFrom.MEMORY_CACHE;
+            log(LOG_GET_IMAGE_FROM_MEMORY_CACHE_AFTER_WAITING);
+        }
+
+        tryPostprocessBitmap(bmp, loadingInfo);
+
+        return bmp;
+    }
+
+    void tryPreprocessBitmap(Bitmap bitmap, ImageServeInfo loadingInfo)
+    {
+        if (loadingInfo.options.shouldPreProcess())
+        {
+            log(LOG_PREPROCESS_IMAGE);
+            bitmap = loadingInfo.options.getPreProcessor().process(bitmap);
+            if (bitmap == null)
+            {
+                L.e(ERROR_PRE_PROCESSOR_NULL, loadingInfo.memoryCacheKey);
+            }
+        }
+    }
+
+    void tryCacheBitmapInMemory(Bitmap bitmap, ImageServeInfo loadingInfo)
+    {
+        if (bitmap != null && loadingInfo.options.isCacheInMemory())
+        {
+            log(LOG_CACHE_IMAGE_IN_MEMORY);
+            configuration.memoryCache.put(loadingInfo.memoryCacheKey, bitmap);
+        }
+    }
+
+    void tryPostprocessBitmap(Bitmap bitmap, ImageServeInfo loadingInfo)
+    {
+        if (bitmap != null && loadingInfo.options.shouldPostProcess())
+        {
+            log(LOG_POSTPROCESS_IMAGE);
+            bitmap = loadingInfo.options.getPostProcessor().process(bitmap);
+            if (bitmap == null)
+            {
+                L.e(ERROR_POST_PROCESSOR_NULL, loadingInfo.memoryCacheKey);
+            }
+        }
     }
 
     String convertToJsonString(List<ImageServeInfo> loadingInfoList) throws JSONException
@@ -335,7 +353,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
     }
 
 
-    private void downloadImages(final String uri, String requestsJson, final SparseArray<ImageServeInfo> matchingMap) throws IOException
+    private void downloadImages(final String uri, String requestsJson) throws IOException, TaskCancelledException
     {
         final DownloadExtra downloadExtra = new DownloadExtra();
         downloadExtra.setHeader("Accept", ACCEPT_HEADER);
@@ -353,6 +371,8 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
 
         MultipartParser parser = new MultipartParser(getDownloader().getStream(uri, downloadExtra), contentType);
         List<BodyPart> bodyParts = parser.parse();
+
+        L.d("Received " + bodyParts.size() + " of multipart/mixed parts");
 
         for (BodyPart bodyPart : bodyParts)
         {
@@ -404,16 +424,19 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
                 continue;
             }
 
-            int hashCode = perImageParams.hashCode();
-            ImageServeInfo info = matchingMap.get(hashCode);
-
-            if (info == null)
+            //There can be multiple requests for same image
+            for (ImageServeInfo info : loadingInfoList)
             {
-                L.e("Unable to match image response with corresponding image request");
-                continue;
-            }
+                Bitmap bitmap = getBitmap(info);
+                if (bitmap != null)
+                {
+                    displayBitmapTask(bitmap, info);
+                    continue;
+                }
 
-            displayImage(bodyPart.getData(), info);
+                if (info.imageServeParams.hashCode() == perImageParams.hashCode())
+                    displayImage(bodyPart.getData(), info);
+            }
         }
     }
 
@@ -433,7 +456,11 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
             return;
         }
 
-        if (isTaskNotActual(loadingInfo.imageAware, loadingInfo.memoryCacheKey)) return;
+        if (isTaskNotActual(loadingInfo.imageAware, loadingInfo.memoryCacheKey))
+        {
+            L.d("View has been collected or reused, cancel display of bitmap");
+            return;
+        }
 
         //If disc cache enabled then load from cache otherwise directly from byte[]
         Bitmap bitmap;
@@ -446,6 +473,11 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         {
             fireFailEvent(FailReason.FailType.DECODING_ERROR, null, loadingInfo);
         }
+
+        tryPreprocessBitmap(bitmap, loadingInfo);
+        //Save to memory cache if allowed
+        tryCacheBitmapInMemory(bitmap, loadingInfo);
+        tryPostprocessBitmap(bitmap, loadingInfo);
 
         DisplayBitmapTask displayBitmapTask = new DisplayBitmapTask(bitmap, loadingInfo, engine, loadedFrom);
         displayBitmapTask.setLoggingEnabled(writeLogs);
