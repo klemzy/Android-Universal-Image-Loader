@@ -4,9 +4,7 @@ import android.graphics.Bitmap;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
-import com.nostra13.universalimageloader.core.assist.ImageRequest;
-import com.nostra13.universalimageloader.core.assist.ImageSize;
-import com.nostra13.universalimageloader.core.assist.LoadedFrom;
+import com.nostra13.universalimageloader.core.assist.*;
 import com.nostra13.universalimageloader.core.imageaware.ImageAware;
 import com.nostra13.universalimageloader.core.listener.ImageLoadingListener;
 import com.nostra13.universalimageloader.utils.ImageServeUtil;
@@ -25,6 +23,7 @@ import java.util.List;
  */
 public class ImageServe extends ImageLoader
 {
+
     public static final String TAG = ImageServe.class.getSimpleName();
 
     protected volatile static ImageServe instance;
@@ -51,131 +50,137 @@ public class ImageServe extends ImageLoader
     {
     }
 
-    public void displayMultipleImage(List<ImageRequest> displayRequests, boolean synchronous)
+    public void serveMultipleImage(List<ImageRequest> requests, boolean synchronous)
     {
-        checkConfiguration();
-
-        L.i("Display " + displayRequests.size() + " images");
-
-        List<ImageServeInfo> loadingInfoList = new ArrayList<ImageServeInfo>();
-        for (ImageRequest request : displayRequests)
+        List<ImageServeInfo> infoList = new ArrayList<ImageServeInfo>();
+        for (ImageRequest imageRequest : requests)
         {
-            ImageAware imageAware = request.getImageAware();
-            ImageLoadingListener listener = request.getLoadingListener();
-            DisplayImageOptions options = request.getDisplayImageOptions();
-            String uri = ImageServeUtil.getProcessedImageUri(request.getKey(), imageAware.getWidth(), imageAware.getHeight(), request.isTransparent(), request.getParams(), imageAware.getScaleType());
+            processImageRequest(infoList, imageRequest);
+        }
 
-            if (listener == null)
-            {
-                listener = emptyListener;
-            }
-            if (options == null)
-            {
-                options = configuration.defaultDisplayImageOptions;
-            }
+        processImageServeInfo(infoList, synchronous);
+    }
 
-            if (TextUtils.isEmpty(uri))
-            {
-                engine.cancelDisplayTaskFor(imageAware);
-                listener.onLoadingStarted(uri, imageAware.getWrappedView());
-                if (options.shouldShowImageForEmptyUri())
-                {
-                    imageAware.setImageDrawable(options.getImageForEmptyUri(configuration.resources));
-                }
-                else
-                {
-                    imageAware.setImageDrawable(null);
-                }
-                listener.onLoadingComplete(uri, imageAware.getWrappedView(), null, null);
-                return;
-            }
+    private void processImageRequest(List<ImageServeInfo> serveInfoList, ImageRequest request)
+    {
+        ImageAware imageAware = request.getImageAware();
+        ImageLoadingListener listener = request.getLoadingListener();
+        DisplayImageOptions options = request.getDisplayImageOptions();
+        String uri = ImageServeUtil.getProcessedImageUri(request.getUri(), imageAware.getWidth(), imageAware.getHeight(), request.isTransparent(), request.getParams(), imageAware.getScaleType());
 
-            ImageSize targetSize = ImageSizeUtils.defineTargetSizeForView(imageAware, configuration.getMaxImageSize());
-            String memoryCacheKey = MemoryCacheUtils.generateKey(uri, targetSize);
-            engine.prepareDisplayTaskFor(imageAware, memoryCacheKey);
+        if (listener == null)
+        {
+            listener = emptyListener;
+        }
+        if (options == null)
+        {
+            options = configuration.defaultDisplayImageOptions;
+        }
 
+        if (TextUtils.isEmpty(uri))
+        {
+            engine.cancelDisplayTaskFor(imageAware);
             listener.onLoadingStarted(uri, imageAware.getWrappedView());
-
-            ImageServeInfo imageLoadingInfo = new ImageServeInfo(uri, imageAware, targetSize, memoryCacheKey,
-                    options, listener, null, engine.getLockForUri(uri), ImageServeUtil.parseImageServeParams(uri));
-
-            Bitmap bmp = configuration.memoryCache.get(memoryCacheKey);
-            if (bmp != null && !bmp.isRecycled())
+            if (options.shouldShowImageForEmptyUri())
             {
-                if (configuration.writeLogs) L.d(LOG_LOAD_IMAGE_FROM_MEMORY_CACHE, memoryCacheKey);
+                imageAware.setImageDrawable(options.getImageForEmptyUri(configuration.resources));
+            }
+            else
+            {
+                imageAware.setImageDrawable(null);
+            }
+            listener.onLoadingComplete(uri, imageAware.getWrappedView(), null, null);
+            return;
+        }
 
-                if (options.shouldPostProcess())
+        ImageSize targetSize = ImageSizeUtils.defineTargetSizeForView(imageAware, configuration.getMaxImageSize());
+        String memoryCacheKey = MemoryCacheUtils.generateKey(uri, targetSize);
+        engine.prepareDisplayTaskFor(imageAware, memoryCacheKey);
+
+        listener.onLoadingStarted(uri, imageAware.getWrappedView());
+
+        ImageServeInfo imageLoadingInfo = new ImageServeInfo(uri, imageAware, targetSize, memoryCacheKey,
+                options, listener, null, engine.getLockForUri(uri), ImageServeUtil.parseImageServeParams(uri));
+
+        Bitmap bmp = configuration.memoryCache.get(memoryCacheKey);
+        if (bmp != null && !bmp.isRecycled())
+        {
+            if (configuration.writeLogs) L.d(LOG_LOAD_IMAGE_FROM_MEMORY_CACHE, memoryCacheKey);
+
+            if (options.shouldPostProcess())
+            {
+
+                ProcessAndDisplayImageTask displayTask = new ProcessAndDisplayImageTask(engine, bmp, imageLoadingInfo,
+                        defineHandler(options));
+                if (options.isSyncLoading())
                 {
-
-                    ProcessAndDisplayImageTask displayTask = new ProcessAndDisplayImageTask(engine, bmp, imageLoadingInfo,
-                            defineHandler(options));
-                    if (options.isSyncLoading())
-                    {
-                        displayTask.run();
-                    }
-                    else
-                    {
-                        engine.submit(displayTask);
-                    }
+                    displayTask.run();
                 }
                 else
                 {
-                    options.getDisplayer().display(bmp, imageAware, LoadedFrom.MEMORY_CACHE);
-                    listener.onLoadingComplete(uri, imageAware.getWrappedView(), bmp, LoadedFrom.MEMORY_CACHE);
+                    engine.submit(displayTask);
                 }
             }
             else
             {
-                if (options.shouldShowImageOnLoading())
-                {
-                    imageAware.setImageDrawable(options.getImageOnLoading(configuration.resources));
-                }
-                else if (options.isResetViewBeforeLoading())
-                {
-                    imageAware.setImageDrawable(null);
-                }
-
-                loadingInfoList.add(imageLoadingInfo);
+                options.getDisplayer().display(bmp, imageAware, LoadedFrom.MEMORY_CACHE);
+                listener.onLoadingComplete(uri, imageAware.getWrappedView(), bmp, LoadedFrom.MEMORY_CACHE);
             }
         }
-
-        if (loadingInfoList.size() < 20 && loadingInfoList.size() > 0)
+        else
         {
-            L.i("Dispatched multi image task with " + loadingInfoList.size() + " images");
-            dispatchMultiGetTask(loadingInfoList, synchronous);
+            if (options.shouldShowImageOnLoading())
+            {
+                imageAware.setImageDrawable(options.getImageOnLoading(configuration.resources));
+            }
+            else if (options.isResetViewBeforeLoading())
+            {
+                imageAware.setImageDrawable(null);
+            }
+
+            serveInfoList.add(imageLoadingInfo);
+        }
+    }
+
+    private void processImageServeInfo(List<ImageServeInfo> infoList, boolean synchronous)
+    {
+        if (infoList.size() < 20 && infoList.size() > 0)
+        {
+            L.i("Dispatched multi image task with " + infoList.size() + " images");
+            dispatchMultipartRequest(infoList, synchronous);
         }
         else
         {
             //Only 18 per multi get request should be sent
             List<ImageServeInfo> list = new ArrayList<ImageServeInfo>();
-            for (int i = 0; i < loadingInfoList.size(); i++)
+            for (int i = 0; i < infoList.size(); i++)
             {
                 if (i % 18 == 0)
                 {
                     if (list.size() > 0)
                     {
                         L.i("Dispatched multi image task with " + list.size() + " images");
-                        dispatchMultiGetTask(list, synchronous);
+                        dispatchMultipartRequest(list, synchronous);
                     }
 
                     list = new ArrayList<ImageServeInfo>();
                 }
 
-                list.add(loadingInfoList.get(i));
+                list.add(infoList.get(i));
             }
 
             if (list.size() > 0)
             {
                 L.i("Dispatched multi image task with " + list.size() + " images");
-                dispatchMultiGetTask(list, synchronous);
+                dispatchMultipartRequest(list, synchronous);
+
             }
         }
-
     }
 
-    private void dispatchMultiGetTask(List<ImageServeInfo> loadingInfoList, boolean synchronous)
+    private void dispatchMultipartRequest(List<ImageServeInfo> infoList, boolean synchronous)
     {
-        LoadAndDisplayMultiImageTask displayTask = new LoadAndDisplayMultiImageTask(loadingInfoList, engine, defineHandler(synchronous));
+        LoadAndDisplayMultiImageTask displayTask = new LoadAndDisplayMultiImageTask(infoList, engine, defineHandler(synchronous));
         if (synchronous)
         {
             displayTask.run();

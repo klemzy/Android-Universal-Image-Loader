@@ -10,12 +10,10 @@ import com.nostra13.universalimageloader.core.listener.ImageLoadingListener;
  * Date: 15. 04. 14
  * Time: 16:49
  */
-public class ImageRequest
+public abstract class ImageRequest
 {
 
-    private String key;
-
-    private ImageAware imageAware;
+    private String uri;
 
     private DisplayImageOptions displayImageOptions = null;
 
@@ -26,10 +24,9 @@ public class ImageRequest
     private boolean transparent;
 
 
-    public ImageRequest(String key, ImageAware imageAware)
+    public ImageRequest(String uri)
     {
-        this.key = key;
-        this.imageAware = imageAware;
+        this.uri = uri;
         this.transparent = false;
         this.params = new ImageServeParams();
     }
@@ -45,14 +42,9 @@ public class ImageRequest
     }
 
 
-    public String getKey()
+    public String getUri()
     {
-        return key;
-    }
-
-    public ImageAware getImageAware()
-    {
-        return imageAware;
+        return uri;
     }
 
     public DisplayImageOptions getDisplayImageOptions()
@@ -84,4 +76,6 @@ public class ImageRequest
     {
         return params;
     }
+
+    public abstract ImageAware getImageAware();
 }
