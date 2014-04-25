@@ -312,17 +312,19 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
     {
         File imageFile = configuration.diskCache.get(loadingInfo.uri);
 
+        if(imageFile == null)
+            return null;
+
         Bitmap bitmap = null;
         try
         {
-            String cacheFileUri = ImageDownloader.Scheme.FILE.wrap(imageFile.getAbsolutePath());
             if (imageFile.exists())
             {
                 log(LOG_LOAD_IMAGE_FROM_DISC_CACHE);
                 loadedFrom = LoadedFrom.DISC_CACHE;
 
                 if (!isTaskNotActual(loadingInfo.imageAware, loadingInfo.memoryCacheKey))
-                    bitmap = decodeImage(loadingInfo, cacheFileUri);
+                    bitmap = decodeImage(loadingInfo, loadingInfo.uri);
             }
         }
         catch (IllegalStateException e)
@@ -442,9 +444,6 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
 
     void displayImage(byte[] imageBinary, ImageServeInfo loadingInfo) throws IOException
     {
-        File imageFile = configuration.diskCache.get(loadingInfo.uri);
-        String cacheFileUri = ImageDownloader.Scheme.FILE.wrap(imageFile.getAbsolutePath());
-
         boolean cachedToDisc;
         try
         {
@@ -465,7 +464,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         //If disc cache enabled then load from cache otherwise directly from byte[]
         Bitmap bitmap;
         if (cachedToDisc)
-            bitmap = decodeImage(loadingInfo, cacheFileUri);
+            bitmap = decodeImage(loadingInfo, loadingInfo.uri);
         else
             bitmap = decodeImage(loadingInfo, imageBinary);
 
