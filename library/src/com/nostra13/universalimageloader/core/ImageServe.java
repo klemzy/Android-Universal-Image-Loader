@@ -25,6 +25,7 @@ import java.util.List;
  */
 public class ImageServe extends ImageLoader
 {
+    public static final String TAG = ImageServe.class.getSimpleName();
 
     protected volatile static ImageServe instance;
 

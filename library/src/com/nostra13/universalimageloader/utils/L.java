@@ -16,7 +16,7 @@
 package com.nostra13.universalimageloader.utils;
 
 import android.util.Log;
-import com.nostra13.universalimageloader.core.ImageLoader;
+import com.nostra13.universalimageloader.core.ImageServe;
 
 /**
  * "Less-word" analog of Android {@link Log logger}
@@ -80,6 +80,6 @@ public final class L {
 			String logBody = Log.getStackTraceString(ex);
 			log = String.format(LOG_FORMAT, logMessage, logBody);
 		}
-		Log.println(priority, ImageLoader.TAG, log);
+		Log.println(priority, ImageServe.TAG, log);
 	}
 }

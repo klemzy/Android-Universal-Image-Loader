@@ -15,11 +15,13 @@
  *******************************************************************************/
 package com.nostra13.universalimageloader.core.listener;
 
+import android.media.Image;
 import android.widget.AbsListView;
 import android.widget.AbsListView.OnScrollListener;
 import android.widget.GridView;
 import android.widget.ListView;
-import com.nostra13.universalimageloader.core.ImageLoader;
+import com.nostra13.universalimageloader.core.ImageServe;
+import com.sun.deploy.ui.ImageLoader;
 
 /**
  * Listener-helper for {@linkplain AbsListView list views} ({@link ListView}, {@link GridView}) which can
@@ -33,7 +35,7 @@ import com.nostra13.universalimageloader.core.ImageLoader;
  */
 public class PauseOnScrollListener implements OnScrollListener {
 
-	private ImageLoader imageLoader;
+	private ImageServe imageLoader;
 
 	private final boolean pauseOnScroll;
 	private final boolean pauseOnFling;
@@ -43,10 +45,10 @@ public class PauseOnScrollListener implements OnScrollListener {
 	 * Constructor
 	 *
 	 * @param imageLoader   {@linkplain ImageLoader} instance for controlling
-	 * @param pauseOnScroll Whether {@linkplain ImageLoader#pause() pause ImageLoader} during touch scrolling
-	 * @param pauseOnFling  Whether {@linkplain ImageLoader#pause() pause ImageLoader} during fling
+	 * @param pauseOnScroll Whether {@linkplain com.nostra13.universalimageloader.core.ImageServe#pause() pause ImageLoader} during touch scrolling
+	 * @param pauseOnFling  Whether {@linkplain com.nostra13.universalimageloader.core.ImageServe#pause() pause ImageLoader} during fling
 	 */
-	public PauseOnScrollListener(ImageLoader imageLoader, boolean pauseOnScroll, boolean pauseOnFling) {
+	public PauseOnScrollListener(ImageServe imageLoader, boolean pauseOnScroll, boolean pauseOnFling) {
 		this(imageLoader, pauseOnScroll, pauseOnFling, null);
 	}
 
@@ -54,12 +56,12 @@ public class PauseOnScrollListener implements OnScrollListener {
 	 * Constructor
 	 *
 	 * @param imageLoader    {@linkplain ImageLoader} instance for controlling
-	 * @param pauseOnScroll  Whether {@linkplain ImageLoader#pause() pause ImageLoader} during touch scrolling
-	 * @param pauseOnFling   Whether {@linkplain ImageLoader#pause() pause ImageLoader} during fling
+	 * @param pauseOnScroll  Whether {@linkplain com.nostra13.universalimageloader.core.ImageServe#pause() pause ImageLoader} during touch scrolling
+	 * @param pauseOnFling   Whether {@linkplain com.nostra13.universalimageloader.core.ImageServe#pause() pause ImageLoader} during fling
 	 * @param customListener Your custom {@link OnScrollListener} for {@linkplain AbsListView list view} which also
 	 *                       will be get scroll events
 	 */
-	public PauseOnScrollListener(ImageLoader imageLoader, boolean pauseOnScroll, boolean pauseOnFling,
+	public PauseOnScrollListener(ImageServe imageLoader, boolean pauseOnScroll, boolean pauseOnFling,
 			OnScrollListener customListener) {
 		this.imageLoader = imageLoader;
 		this.pauseOnScroll = pauseOnScroll;
