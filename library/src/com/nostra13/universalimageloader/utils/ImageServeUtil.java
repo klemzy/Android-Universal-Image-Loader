@@ -118,7 +118,7 @@ public class ImageServeUtil
         return outUri.toString();
     }
 
-    private static String getImageFormat(boolean transparent, int versionSDK)
+    static String getImageFormat(boolean transparent, int versionSDK)
     {
         String format;
         if (transparent)
