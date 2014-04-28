@@ -63,17 +63,23 @@ public class ImageServe extends ImageLoader
 
     public void loadImage(LoadImageRequest imageRequest)
     {
-        ImageLoader.getInstance().displayImage(imageRequest.getUri(), imageRequest.getImageAware(), imageRequest.getDisplayImageOptions(), imageRequest.getLoadingListener());
+        displayImage(imageRequest.getUri(), imageRequest.getImageAware(), imageRequest.getDisplayImageOptions(), imageRequest.getLoadingListener());
     }
 
     public void displayImage(DisplayImageRequest imageRequest)
     {
-        ImageLoader.getInstance().displayImage(imageRequest.getUri(), imageRequest.getImageAware(), imageRequest.getDisplayImageOptions(), imageRequest.getLoadingListener());
+        displayImage(imageRequest.getUri(), imageRequest.getImageAware(), imageRequest.getDisplayImageOptions(), imageRequest.getLoadingListener());
     }
 
     public void cancelRequest(ImageRequest imageRequest)
     {
-        ImageLoader.getInstance().cancelDisplayTask(imageRequest.getImageAware());
+        cancelDisplayTask(imageRequest.getImageAware());
+    }
+
+    public void cancelRequest(List<ImageRequest> requests)
+    {
+        for (ImageRequest request : requests)
+            cancelDisplayTask(request.getImageAware());
     }
 
     private void processImageRequest(List<ImageServeInfo> serveInfoList, ImageRequest request)
