@@ -47,10 +47,36 @@ public class ImageServeUtil
 
             boolean isFirst = true;
             boolean hasQuality = false;
+
+            String fit = null;
+            String fill = null;
+            String thumb = null;
+
             for (NameValuePair param : URLEncodedUtils.parse(currentUri, "UTF-8"))
             {
-                // Ignore fit, fill, thumb and out parameters
-                if (param.getName().equals("fit") || param.getName().equals("fill") || param.getName().equals("out") || param.getName().equals("thumb"))
+                // Ignore fit, fill, thumb and out parameters however remember params in case new parameters are not added
+                boolean cont = false;
+                if (param.getName().equals("fit"))
+                {
+                    cont = true;
+                    fit = param.getValue();
+                }
+                else if (param.getName().equals("fill"))
+                {
+                    cont = true;
+                    fill = param.getValue();
+                }
+                else if (param.getName().equals("thumb"))
+                {
+                    cont = true;
+                    thumb = param.getValue();
+                }
+                else if (param.getName().equals("out"))
+                {
+                    cont = true;
+                }
+
+                if (cont)
                     continue;
 
                 if (param.getName().equals("q")) hasQuality = true;
@@ -58,6 +84,7 @@ public class ImageServeUtil
                 String delimiter = isFirst ? "?" : "&";
                 isFirst = false;
 
+                //Replace current parameter with parameter value from ImageServeParams if there is one set
                 if (params != null && params.getBlur() != -1 && param.getName().equals("blur"))
                 {
                     addParamToUrl(outUri, "blur", String.valueOf(params.getBlur()), delimiter);
@@ -81,6 +108,7 @@ public class ImageServeUtil
             if (!hasQuality)
                 addParamToUrl(outUri, "q", "100", "&");
 
+            //If no scale type of width/height has been requested keep original params
             if (viewScaleType != null && width > 0 && height > 0)
             {
                 String paramName = null;
@@ -99,6 +127,17 @@ public class ImageServeUtil
                 }
 
                 addParamToUrl(outUri, paramName, paramValue, "&");
+            }
+            else
+            {
+                if (fit != null)
+                    addParamToUrl(outUri, "fit", fit, "&");
+
+                if (fill != null)
+                    addParamToUrl(outUri, "fill", fill, "&");
+
+                if (thumb != null)
+                    addParamToUrl(outUri, "thumb", thumb, "&");
             }
 
             //If specific format hasnt been requested then calculate format based on transparency and Android API version
@@ -155,11 +194,19 @@ public class ImageServeUtil
         Map<String, String> paramsMap = new TreeMap<String, String>();
 
         int index = uri.indexOf("?");
+        if (index == -1)
+            return paramsMap;
+
+        if ((index + 1) > (uri.length() - 1))
+            return paramsMap;
+
         String allParams = uri.substring(index + 1);
         String[] params = allParams.split("&");
         for (String param : params)
         {
             String[] valueAndName = param.split("=");
+            if (valueAndName.length != 2) continue;
+
             String valueName = valueAndName[0].equalsIgnoreCase("blob-key") ? "key" : valueAndName[0];
             paramsMap.put(valueName, valueAndName[1]);
         }
