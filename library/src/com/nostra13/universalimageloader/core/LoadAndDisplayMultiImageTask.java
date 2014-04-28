@@ -19,10 +19,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URLEncoder;
 import java.util.Iterator;
@@ -52,11 +49,9 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
 
     private static final String LOG_RESUME_AFTER_PAUSE = ".. Resume loading [%s]";
 
-    private static final String LOG_DELAY_BEFORE_LOADING = "Delay %d ms before loading...  [%s]";
-
     private static final String LOG_START_DISPLAY_IMAGE_TASK = "Start display image task [%s]";
 
-    private static final String LOG_WAITING_FOR_IMAGE_LOADED = "Image already is loading. Waiting... [%s]";
+    private static final String LOG_IMAGE_ALREADY_ADDED_TO_MULTIPART_REQUEST_LIST = "Image has already been added to multipart request list. Skipping...";
 
     private static final String LOG_GET_IMAGE_FROM_MEMORY_CACHE_AFTER_WAITING = "...Get cached bitmap from memory after waiting. [%s]";
 
@@ -138,14 +133,17 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
             //Check if view has already been GC'd
             String memoryCacheKey = loadingInfo.memoryCacheKey;
 
-            if (isTaskNotActual(loadingInfo.imageAware, memoryCacheKey)) continue;
+            if (isTaskNotActual(loadingInfo.imageAware, memoryCacheKey))
+            {
+                continue;
+            }
 
             //Check if image with this uri is already being downloaded
             ReentrantLock loadFromUriLock = loadingInfo.loadFromUriLock;
-            log(LOG_START_DISPLAY_IMAGE_TASK);
+            log(LOG_START_DISPLAY_IMAGE_TASK, memoryCacheKey);
             if (loadFromUriLock.isLocked())
             {
-                log(LOG_WAITING_FOR_IMAGE_LOADED);
+                log(LOG_IMAGE_ALREADY_ADDED_TO_MULTIPART_REQUEST_LIST, memoryCacheKey);
                 continue;
             }
 
@@ -156,13 +154,19 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
             try
             {
 
-                if (isTaskNotActual(loadingInfo.imageAware, memoryCacheKey)) continue;
-                if (isTaskInterrupted()) throw new TaskCancelledException();
+                if (isTaskNotActual(loadingInfo.imageAware, memoryCacheKey))
+                {
+                    continue;
+                }
+                if (isTaskInterrupted(memoryCacheKey)) throw new TaskCancelledException();
 
                 bmp = getBitmap(loadingInfo);
 
-                if (isTaskNotActual(loadingInfo.imageAware, memoryCacheKey)) continue;
-                if (isTaskInterrupted()) throw new TaskCancelledException();
+                if (isTaskNotActual(loadingInfo.imageAware, memoryCacheKey))
+                {
+                    continue;
+                }
+                if (isTaskInterrupted(memoryCacheKey)) throw new TaskCancelledException();
 
                 //Bitmap has been found, display it and remove from list
                 if (bmp != null)
@@ -170,6 +174,10 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
                     displayBitmapTask(bmp, loadingInfo);
                     iterator.remove();
                     loadFromUriLock.unlock();
+                }
+                else
+                {
+                    log(LOG_LOAD_IMAGE_FROM_NETWORK, loadingInfo.memoryCacheKey);
                 }
 
             }
@@ -182,7 +190,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
 
         if (loadingInfoList.size() == 0)
         {
-            L.i("No images to download with multipart/mixed");
+            log("Nothing to download. Empty multipart image request");
             return;
         }
 
@@ -218,11 +226,18 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         Bitmap bmp = configuration.memoryCache.get(memoryCacheKey);
         if (bmp == null)
         {
+            long start = System.currentTimeMillis();
             bmp = tryLoadBitmapFromDisk(loadingInfo);
+            log("TIME Load bitmap from disk: " + (System.currentTimeMillis() - start));
+
             if (bmp == null) return null;
 
-            if (isTaskNotActual(loadingInfo.imageAware, memoryCacheKey)) return null;
-            if (isTaskInterrupted()) throw new TaskCancelledException();
+            if (isTaskNotActual(loadingInfo.imageAware, memoryCacheKey))
+            {
+                return null;
+            }
+
+            if (isTaskInterrupted(memoryCacheKey)) throw new TaskCancelledException();
 
             tryPreprocessBitmap(bmp, loadingInfo);
             tryCacheBitmapInMemory(bmp, loadingInfo);
@@ -230,7 +245,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         else
         {
             loadedFrom = LoadedFrom.MEMORY_CACHE;
-            log(LOG_GET_IMAGE_FROM_MEMORY_CACHE_AFTER_WAITING);
+            log(LOG_GET_IMAGE_FROM_MEMORY_CACHE_AFTER_WAITING, memoryCacheKey);
         }
 
         tryPostprocessBitmap(bmp, loadingInfo);
@@ -242,7 +257,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
     {
         if (loadingInfo.options.shouldPreProcess())
         {
-            log(LOG_PREPROCESS_IMAGE);
+            log(LOG_PREPROCESS_IMAGE, loadingInfo.memoryCacheKey);
             bitmap = loadingInfo.options.getPreProcessor().process(bitmap);
             if (bitmap == null)
             {
@@ -255,7 +270,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
     {
         if (bitmap != null && loadingInfo.options.isCacheInMemory())
         {
-            log(LOG_CACHE_IMAGE_IN_MEMORY);
+            log(LOG_CACHE_IMAGE_IN_MEMORY, loadingInfo.memoryCacheKey);
             configuration.memoryCache.put(loadingInfo.memoryCacheKey, bitmap);
         }
     }
@@ -264,7 +279,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
     {
         if (bitmap != null && loadingInfo.options.shouldPostProcess())
         {
-            log(LOG_POSTPROCESS_IMAGE);
+            log(LOG_POSTPROCESS_IMAGE, loadingInfo.memoryCacheKey);
             bitmap = loadingInfo.options.getPostProcessor().process(bitmap);
             if (bitmap == null)
             {
@@ -312,19 +327,21 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
     {
         File imageFile = configuration.diskCache.get(loadingInfo.uri);
 
-        if(imageFile == null)
-            return null;
 
         Bitmap bitmap = null;
         try
         {
-            if (imageFile.exists())
+            if (imageFile != null && imageFile.exists())
             {
-                log(LOG_LOAD_IMAGE_FROM_DISC_CACHE);
+                String cacheFileUri = ImageDownloader.Scheme.FILE.wrap(imageFile.getAbsolutePath());
+
+                log(LOG_LOAD_IMAGE_FROM_DISC_CACHE, loadingInfo.memoryCacheKey);
                 loadedFrom = LoadedFrom.DISC_CACHE;
 
                 if (!isTaskNotActual(loadingInfo.imageAware, loadingInfo.memoryCacheKey))
-                    bitmap = decodeImage(loadingInfo, loadingInfo.uri);
+                {
+                    bitmap = decodeImage(loadingInfo, cacheFileUri);
+                }
             }
         }
         catch (IllegalStateException e)
@@ -371,10 +388,17 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
             }
         });
 
-        MultipartParser parser = new MultipartParser(getDownloader().getStream(uri, downloadExtra), contentType);
+        long start = System.currentTimeMillis();
+        InputStream inputStream = getDownloader().getStream(uri, downloadExtra);
+        log("TIME Load bitmaps from network: " + (System.currentTimeMillis() - start));
+
+        start = System.currentTimeMillis();
+        MultipartParser parser = new MultipartParser(inputStream, contentType);
+        log("TIME Parse bitmaps from response: " + (System.currentTimeMillis() - start));
+
         List<BodyPart> bodyParts = parser.parse();
 
-        L.d("Received " + bodyParts.size() + " of multipart/mixed parts");
+        log("Received " + bodyParts.size() + " of multipart/mixed parts");
 
         for (BodyPart bodyPart : bodyParts)
         {
@@ -447,7 +471,11 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         boolean cachedToDisc;
         try
         {
-            cachedToDisc = loadingInfo.options.isCacheOnDisk() && tryCacheImageOnDisk(loadingInfo, imageBinary);
+            long start = System.currentTimeMillis();
+            boolean cacheResult = tryCacheImageOnDisk(loadingInfo, imageBinary);
+            log("TIME Save bitmap to disk: " + (System.currentTimeMillis() - start));
+
+            cachedToDisc = loadingInfo.options.isCacheOnDisk() && cacheResult;
         }
         catch (TaskCancelledException e)
         {
@@ -455,22 +483,30 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
             return;
         }
 
+        File imageFile = configuration.diskCache.get(loadingInfo.uri);
+        if(imageFile == null)
+            return;
+
+        String cacheFileUri = ImageDownloader.Scheme.FILE.wrap(imageFile.getAbsolutePath());
+
+
         if (isTaskNotActual(loadingInfo.imageAware, loadingInfo.memoryCacheKey))
         {
-            L.d("View has been collected or reused, cancel display of bitmap");
+            log("View has been collected or reused, cancel display of bitmap");
             return;
         }
 
         //If disc cache enabled then load from cache otherwise directly from byte[]
         Bitmap bitmap;
         if (cachedToDisc)
-            bitmap = decodeImage(loadingInfo, loadingInfo.uri);
+            bitmap = decodeImage(loadingInfo, cacheFileUri);
         else
             bitmap = decodeImage(loadingInfo, imageBinary);
 
         if (bitmap == null || bitmap.getWidth() <= 0 || bitmap.getHeight() <= 0)
         {
             fireFailEvent(FailReason.FailType.DECODING_ERROR, null, loadingInfo);
+            return;
         }
 
         tryPreprocessBitmap(bitmap, loadingInfo);
@@ -504,7 +540,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
 
     private boolean tryCacheImageOnDisk(ImageLoadingInfo loadingInfo, byte[] imageData) throws TaskCancelledException
     {
-        log(LOG_CACHE_IMAGE_ON_DISC);
+        log(LOG_CACHE_IMAGE_ON_DISC, loadingInfo.memoryCacheKey);
 
         boolean loaded = false;
         try
@@ -516,7 +552,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
                 int height = configuration.maxImageHeightForDiskCache;
                 if (width > 0 || height > 0)
                 {
-                    log(LOG_RESIZE_CACHED_IMAGE_FILE);
+                    log(LOG_RESIZE_CACHED_IMAGE_FILE, loadingInfo.memoryCacheKey);
                     loaded = resizeAndSaveImage(loadingInfo, width, height); // TODO : process boolean result
                 }
             }
@@ -548,7 +584,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
             Bitmap bmp = decoder.decode(decodingInfo);
             if (bmp != null && configuration.processorForDiskCache != null)
             {
-                log(LOG_PROCESS_IMAGE_BEFORE_CACHE_ON_DISK);
+                log(LOG_PROCESS_IMAGE_BEFORE_CACHE_ON_DISK, loadingInfo.memoryCacheKey);
                 bmp = configuration.processorForDiskCache.process(bmp);
                 if (bmp == null)
                 {
@@ -567,8 +603,10 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
 
     private void fireFailEvent(final FailReason.FailType failType, final Throwable failCause, final ImageServeInfo loadingInfo)
     {
-        if (loadingInfo.options.isSyncLoading() || isTaskInterrupted() || isTaskNotActual(loadingInfo.imageAware, loadingInfo.memoryCacheKey))
+        if (loadingInfo.options.isSyncLoading() || isTaskInterrupted(loadingInfo.memoryCacheKey) || isTaskNotActual(loadingInfo.imageAware, loadingInfo.memoryCacheKey))
+        {
             return;
+        }
         Runnable r = new Runnable()
         {
             @Override
@@ -586,7 +624,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
 
     private void fireCancelEvent(final ImageServeInfo loadingInfo)
     {
-        if (loadingInfo.options.isSyncLoading() || isTaskInterrupted()) return;
+        if (loadingInfo.options.isSyncLoading() || isTaskInterrupted(loadingInfo.memoryCacheKey)) return;
         Runnable r = new Runnable()
         {
             @Override
@@ -654,7 +692,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
      */
     private boolean isTaskNotActual(ImageAware imageAware, String memoryCacheKey)
     {
-        return isViewCollected(imageAware) || isViewReused(imageAware, memoryCacheKey);
+        return isViewCollected(imageAware, memoryCacheKey) || isViewReused(imageAware, memoryCacheKey);
     }
 
 
@@ -669,7 +707,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         boolean imageAwareWasReused = !memoryCacheKey.equals(currentCacheKey);
         if (imageAwareWasReused)
         {
-            log(LOG_TASK_CANCELLED_IMAGEAWARE_REUSED);
+            log(LOG_TASK_CANCELLED_IMAGEAWARE_REUSED, memoryCacheKey);
             return true;
         }
         return false;
@@ -678,11 +716,11 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
     /**
      * @return <b>true</b> - if target ImageAware is collected by GC; <b>false</b> - otherwise
      */
-    private boolean isViewCollected(ImageAware imageAware)
+    private boolean isViewCollected(ImageAware imageAware, String memoryCacheKey)
     {
         if (imageAware.isCollected())
         {
-            log(LOG_TASK_CANCELLED_IMAGEAWARE_COLLECTED);
+            log(LOG_TASK_CANCELLED_IMAGEAWARE_COLLECTED, memoryCacheKey);
             return true;
         }
         return false;
@@ -692,11 +730,11 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
     /**
      * @return <b>true</b> - if current task was interrupted; <b>false</b> - otherwise
      */
-    private boolean isTaskInterrupted()
+    private boolean isTaskInterrupted(String memoryCacheKey)
     {
         if (Thread.interrupted())
         {
-            log(LOG_TASK_INTERRUPTED);
+            log(LOG_TASK_INTERRUPTED, memoryCacheKey);
             return true;
         }
         return false;

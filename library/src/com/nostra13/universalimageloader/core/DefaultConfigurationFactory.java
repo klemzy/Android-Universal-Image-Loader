@@ -34,13 +34,7 @@ import com.nostra13.universalimageloader.core.download.ImageDownloader;
 import com.nostra13.universalimageloader.utils.StorageUtils;
 
 import java.io.File;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -84,7 +78,7 @@ public class DefaultConfigurationFactory {
 			diskCache.setReserveCacheDir(reserveCacheDir);
 			return diskCache;
 		} else {
-			File cacheDir = StorageUtils.getCacheDirectory(context);
+            File cacheDir = StorageUtils.getCacheDirectory(context);
 			return new UnlimitedDiscCache(cacheDir, reserveCacheDir, diskCacheFileNameGenerator);
 		}
 	}
