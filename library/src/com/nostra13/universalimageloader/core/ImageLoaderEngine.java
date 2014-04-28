@@ -22,10 +22,9 @@ import com.nostra13.universalimageloader.core.imageaware.ImageAware;
 import com.nostra13.universalimageloader.core.listener.ImageLoadingListener;
 
 import java.io.File;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -48,8 +47,8 @@ class ImageLoaderEngine
 
     private Executor taskDistributor;
 
-    private final Map<Integer, String> cacheKeysForImageAwares = Collections
-            .synchronizedMap(new HashMap<Integer, String>());
+    private final Map<Integer, String> cacheKeysForImageAwares = new ConcurrentHashMap<Integer, String>();
+
 
     private final Map<String, ReentrantLock> uriLocks = new WeakHashMap<String, ReentrantLock>();
 

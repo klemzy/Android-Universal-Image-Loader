@@ -50,7 +50,7 @@ public class ImageServe extends ImageLoader
     {
     }
 
-    public void serveMultipleImage(List<ImageRequest> requests, boolean synchronous)
+    public void serveImages(List<ImageRequest> requests, boolean synchronous)
     {
         List<ImageServeInfo> infoList = new ArrayList<ImageServeInfo>();
         for (ImageRequest imageRequest : requests)
@@ -59,6 +59,21 @@ public class ImageServe extends ImageLoader
         }
 
         processImageServeInfo(infoList, synchronous);
+    }
+
+    public void loadImage(LoadImageRequest imageRequest)
+    {
+        ImageLoader.getInstance().displayImage(imageRequest.getUri(), imageRequest.getImageAware(), imageRequest.getDisplayImageOptions(), imageRequest.getLoadingListener());
+    }
+
+    public void displayImage(DisplayImageRequest imageRequest)
+    {
+        ImageLoader.getInstance().displayImage(imageRequest.getUri(), imageRequest.getImageAware(), imageRequest.getDisplayImageOptions(), imageRequest.getLoadingListener());
+    }
+
+    public void cancelRequest(ImageRequest imageRequest)
+    {
+        ImageLoader.getInstance().cancelDisplayTask(imageRequest.getImageAware());
     }
 
     private void processImageRequest(List<ImageServeInfo> serveInfoList, ImageRequest request)
