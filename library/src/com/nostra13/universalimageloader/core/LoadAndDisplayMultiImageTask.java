@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * IntelliJ IDEA.
@@ -135,19 +134,6 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
 
             if (isTaskNotActual(loadingInfo.imageAware, memoryCacheKey)) continue;
 
-
-            ReentrantLock loadFromUriLock = loadingInfo.loadFromUriLock;
-            log(LOG_START_DISPLAY_IMAGE_TASK, memoryCacheKey);
-            if (loadFromUriLock.isLocked())
-            {
-                log(LOG_IMAGE_ALREADY_ADDED_TO_MULTIPART_REQUEST_LIST, memoryCacheKey);
-
-                //Check if image with this uri is already being downloaded, try to load it however dont add it to download request
-                loadingInfo.setDownload(false);
-            }
-
-            loadFromUriLock.lock();
-
             //Check if image exists on disc or in memory
             Bitmap bmp;
             try
@@ -168,7 +154,6 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
                 {
                     displayBitmapTask(bmp, loadingInfo);
                     iterator.remove();
-                    loadFromUriLock.unlock();
                 }
                 else
                 {
@@ -195,18 +180,6 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
             String imageRequests = convertToJsonString(loadingInfoList);
             String hashString = StringUtils.sha256(ACCEPT_HEADER + "#" + imageRequests);
             downloadImages(IMAGE_URL + "?hash=" + URLEncoder.encode(hashString, "UTF-8"), imageRequests);
-
-            /*
-            Unlock locks after download. In multiget same url can be request for different views and therefore contained
-            in multiple requests which means lock can be acquired in different thread. Check whether lock has been acquired in this
-            thread before unlock.
-             */
-            for (ImageServeInfo info : loadingInfoList)
-            {
-                if (info.loadFromUriLock.isLocked() && info.loadFromUriLock.isHeldByCurrentThread())
-                    info.loadFromUriLock.unlock();
-            }
-
         }
         catch (JSONException e)
         {
@@ -300,12 +273,9 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         Map<String, Map<String, String>> map = new TreeMap<String, Map<String, String>>();
         for (ImageServeInfo loadingInfo : loadingInfoList)
         {
-            if (loadingInfo.isDownload())
-            {
-                Map<String, String> params = loadingInfo.imageServeParams;
-                String key = params.get("key");
-                map.put(key, params);
-            }
+            Map<String, String> params = loadingInfo.imageServeParams;
+            String key = params.get("key");
+            map.put(key, params);
         }
 
         JSONObject listObject = new JSONObject();
