@@ -177,7 +177,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         {
             String imageRequests = convertToJsonString(loadingInfoList);
             String hashString = StringUtils.sha256(ACCEPT_HEADER + "#" + imageRequests);
-            downloadImages(IMAGE_URL + "?hash=" + URLEncoder.encode(hashString, "UTF-8"), imageRequests);
+            downloadImagesAndParseResponse(IMAGE_URL + "?hash=" + URLEncoder.encode(hashString, "UTF-8"), imageRequests);
         }
         catch (JSONException e)
         {
@@ -351,7 +351,16 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
     }
 
 
-    private void downloadImages(final String uri, String requestsJson) throws IOException, TaskCancelledException
+    /**
+     * Download multiple images.
+     * See https://github.com/Iddiction/backend/wiki/ImageServe-API for more details
+     *
+     * @param uri          Uri of service that serves multiple images
+     * @param requestsJson Json of all images (uri and params) that should be returned
+     * @throws IOException
+     * @throws TaskCancelledException
+     */
+    void downloadImagesAndParseResponse(final String uri, String requestsJson) throws IOException, TaskCancelledException
     {
         final DownloadExtra downloadExtra = new DownloadExtra();
         downloadExtra.setHeader("Accept", ACCEPT_HEADER);
@@ -379,6 +388,19 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
 
         log("Received " + bodyParts.size() + " of multipart/mixed parts");
 
+        SparseArray<BodyPart> bodyPartMap = createBodyPartMap(bodyParts);
+        displayImages(bodyPartMap, loadingInfoList);
+    }
+
+    /**
+     * Create map of BodyParts. Key is hashcode of image parameters. That way every BodyPart can be matched with
+     * request (ImageServeInfo)
+     *
+     * @param bodyParts List of BodyPart that represent a single image response
+     * @return Map of BodyParts
+     */
+    SparseArray<BodyPart> createBodyPartMap(List<BodyPart> bodyParts)
+    {
         SparseArray<BodyPart> bodyPartMap = new SparseArray<BodyPart>();
         for (BodyPart bodyPart : bodyParts)
         {
@@ -433,11 +455,22 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
             bodyPartMap.put(perImageParams.hashCode(), bodyPart);
         }
 
-        /**
-         *For every request try to load image from memory/disk otherwise try to find matching BodyPart. In most cases image
-         *will not be in memory/disk at this point. However if there have been multiple requests for the same image but different
-         * view then try to load image from memory/disk.
-         **/
+        return bodyPartMap;
+    }
+
+    /**
+     * For every request try to load image from memory/disk otherwise try to find matching BodyPart. In most cases image
+     * will not be in memory/disk at this point. However if there have been multiple requests for the same image but different
+     * view then try to load image from memory/disk.
+     *
+     * @param bodyPartMap Map of BodyParts that is used to match request with BodyPart
+     * @param loadingInfoList List of requests
+     *
+     * @throws TaskCancelledException
+     * @throws IOException
+     */
+    void displayImages(SparseArray<BodyPart> bodyPartMap, List<ImageServeInfo> loadingInfoList) throws TaskCancelledException, IOException
+    {
         for (ImageServeInfo info : loadingInfoList)
         {
             Bitmap bitmap = getBitmap(info);
