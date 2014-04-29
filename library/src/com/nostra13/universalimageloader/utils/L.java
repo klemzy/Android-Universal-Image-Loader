@@ -26,7 +26,7 @@ import com.nostra13.universalimageloader.core.ImageServe;
  */
 public final class L {
 
-	private static final String LOG_FORMAT = "%1$s\n%2$s";
+	private static final String LOG_FORMAT = "%1$s%n%2$s";
 	private static volatile boolean DISABLED = false;
 
 	private L() {

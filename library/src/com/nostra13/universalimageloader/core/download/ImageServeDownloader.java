@@ -68,9 +68,8 @@ public class ImageServeDownloader extends BaseImageDownloader
 
         if (extra != null)
         {
-            Map<String, String> headers = extra.getHeaders();
-            for (String headerName : headers.keySet())
-                conn.addRequestProperty(headerName, headers.get(headerName));
+            for (Map.Entry<String, String> header : extra.getHeaders().entrySet())
+                conn.addRequestProperty(header.getKey(), header.getValue());
         }
 
         conn.setConnectTimeout(connectTimeout);

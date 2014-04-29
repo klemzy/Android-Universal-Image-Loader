@@ -133,18 +133,17 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
             //Check if view has already been GC'd
             String memoryCacheKey = loadingInfo.memoryCacheKey;
 
-            if (isTaskNotActual(loadingInfo.imageAware, memoryCacheKey))
-            {
-                continue;
-            }
+            if (isTaskNotActual(loadingInfo.imageAware, memoryCacheKey)) continue;
 
-            //Check if image with this uri is already being downloaded
+
             ReentrantLock loadFromUriLock = loadingInfo.loadFromUriLock;
             log(LOG_START_DISPLAY_IMAGE_TASK, memoryCacheKey);
             if (loadFromUriLock.isLocked())
             {
                 log(LOG_IMAGE_ALREADY_ADDED_TO_MULTIPART_REQUEST_LIST, memoryCacheKey);
-                continue;
+
+                //Check if image with this uri is already being downloaded, try to load it however dont add it to download request
+                loadingInfo.setDownload(false);
             }
 
             loadFromUriLock.lock();
@@ -154,18 +153,14 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
             try
             {
 
-                if (isTaskNotActual(loadingInfo.imageAware, memoryCacheKey))
-                {
-                    continue;
-                }
+                if (isTaskNotActual(loadingInfo.imageAware, memoryCacheKey)) continue;
+
                 if (isTaskInterrupted(memoryCacheKey)) throw new TaskCancelledException();
 
                 bmp = getBitmap(loadingInfo);
 
-                if (isTaskNotActual(loadingInfo.imageAware, memoryCacheKey))
-                {
-                    continue;
-                }
+                if (isTaskNotActual(loadingInfo.imageAware, memoryCacheKey)) continue;
+
                 if (isTaskInterrupted(memoryCacheKey)) throw new TaskCancelledException();
 
                 //Bitmap has been found, display it and remove from list
@@ -200,6 +195,18 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
             String imageRequests = convertToJsonString(loadingInfoList);
             String hashString = StringUtils.sha256(ACCEPT_HEADER + "#" + imageRequests);
             downloadImages(IMAGE_URL + "?hash=" + URLEncoder.encode(hashString, "UTF-8"), imageRequests);
+
+            /*
+            Unlock locks after download. In multiget same url can be request for different views and therefore contained
+            in multiple requests which means lock can be acquired in different thread. Check whether lock has been acquired in this
+            thread before unlock.
+             */
+            for (ImageServeInfo info : loadingInfoList)
+            {
+                if (info.loadFromUriLock.isLocked() && info.loadFromUriLock.isHeldByCurrentThread())
+                    info.loadFromUriLock.unlock();
+            }
+
         }
         catch (JSONException e)
         {
@@ -293,19 +300,23 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         Map<String, Map<String, String>> map = new TreeMap<String, Map<String, String>>();
         for (ImageServeInfo loadingInfo : loadingInfoList)
         {
-            Map<String, String> params = loadingInfo.imageServeParams;
-            String key = params.get("key");
-            map.put(key, params);
+            if (loadingInfo.isDownload())
+            {
+                Map<String, String> params = loadingInfo.imageServeParams;
+                String key = params.get("key");
+                map.put(key, params);
+            }
         }
 
         JSONObject listObject = new JSONObject();
         JSONArray array = new JSONArray();
-        for (String key : map.keySet())
+
+
+        for (Map.Entry<String, Map<String, String>> params : map.entrySet())
         {
-            Map<String, String> params = map.get(key);
             JSONObject object = new JSONObject();
-            for (String paramName : params.keySet())
-                object.put(paramName, params.get(paramName));
+            for (Map.Entry<String, String> param : params.getValue().entrySet())
+                object.put(param.getKey(), param.getValue());
 
             array.put(object);
         }
@@ -484,7 +495,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         }
 
         File imageFile = configuration.diskCache.get(loadingInfo.uri);
-        if(imageFile == null)
+        if (imageFile == null)
             return;
 
         String cacheFileUri = ImageDownloader.Scheme.FILE.wrap(imageFile.getAbsolutePath());
