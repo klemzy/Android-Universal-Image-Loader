@@ -201,7 +201,17 @@ public class ImageServe extends ImageLoader
 
     private void dispatchMultipartRequest(List<ImageServeInfo> infoList, boolean synchronous)
     {
-        LoadAndDisplayMultiImageTask displayTask = new LoadAndDisplayMultiImageTask(infoList, engine, defineHandler(synchronous));
+        LoadAndDisplayMultiImageTask displayTask = new LoadAndDisplayMultiImageTask(
+                infoList,
+                engine,
+                engine.configuration,
+                configuration.downloader,
+                configuration.networkDeniedDownloader,
+                configuration.slowNetworkDownloader,
+                configuration.decoder,
+                configuration.writeLogs,
+                defineHandler(synchronous));
+
         if (synchronous)
         {
             displayTask.run();

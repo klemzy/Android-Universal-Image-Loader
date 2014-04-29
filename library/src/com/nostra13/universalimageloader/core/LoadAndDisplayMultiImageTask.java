@@ -103,17 +103,20 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
 
     private LoadedFrom loadedFrom = LoadedFrom.NETWORK;
 
-    public LoadAndDisplayMultiImageTask(List<ImageServeInfo> loadingInfoList, ImageLoaderEngine engine, Handler handler)
+    public LoadAndDisplayMultiImageTask(List<ImageServeInfo> loadingInfoList, ImageLoaderEngine engine,
+                                        ImageLoaderConfiguration configuration, ImageDownloader downloader,
+                                        ImageDownloader networkDeniedDownloader, ImageDownloader slowNetworkDownloader,
+                                        ImageDecoder decoder, boolean writeLogs, Handler handler)
     {
         this.loadingInfoList = loadingInfoList;
         this.engine = engine;
 
-        this.configuration = engine.configuration;
-        this.downloader = configuration.downloader;
-        this.networkDeniedDownloader = configuration.networkDeniedDownloader;
-        this.slowNetworkDownloader = configuration.slowNetworkDownloader;
-        this.decoder = configuration.decoder;
-        this.writeLogs = configuration.writeLogs;
+        this.configuration = configuration;
+        this.downloader = downloader;
+        this.networkDeniedDownloader = networkDeniedDownloader;
+        this.slowNetworkDownloader = slowNetworkDownloader;
+        this.decoder = decoder;
+        this.writeLogs = writeLogs;
         this.handler = handler;
 
     }

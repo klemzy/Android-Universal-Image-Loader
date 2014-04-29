@@ -327,10 +327,13 @@ public class MultipartParser
                     buf.write(inbuf, 0, inSize);
 
                 /*
-                 * Create a MimeBody element to represent this body part.
+                 * Create a MimeBody element to represent this body part if there is some content.
                  */
-                BodyPart part = new BodyPart(headers, buf.toByteArray());
-                bodyParts.add(part);
+                if(buf.size() != 0)
+                {
+                    BodyPart part = new BodyPart(headers, buf.toByteArray());
+                    bodyParts.add(part);
+                }
             }
         }
         catch (IOException ioex)
