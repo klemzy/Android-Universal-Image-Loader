@@ -433,8 +433,11 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
             bodyPartMap.put(perImageParams.hashCode(), bodyPart);
         }
 
-
-        //There can be multiple requests for same image
+        /**
+         *For every request try to load image from memory/disk otherwise try to find matching BodyPart. In most cases image
+         *will not be in memory/disk at this point. However if there have been multiple requests for the same image but different
+         * view then try to load image from memory/disk.
+         **/
         for (ImageServeInfo info : loadingInfoList)
         {
             Bitmap bitmap = getBitmap(info);
@@ -445,7 +448,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
             }
 
             BodyPart bodyPart = bodyPartMap.get(info.imageServeParams.hashCode());
-            if(bodyPart != null) displayImage(bodyPart.getData(), info);
+            if (bodyPart != null) displayImage(bodyPart.getData(), info);
         }
     }
 
