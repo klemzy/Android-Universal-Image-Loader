@@ -3,6 +3,7 @@ package com.nostra13.universalimageloader.core.multipart;
 
 import android.annotation.TargetApi;
 import android.os.Build;
+import com.nostra13.universalimageloader.utils.L;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -41,6 +42,11 @@ public class MultipartParser
         boolean complete = true;
         List<BodyPart> bodyParts = new ArrayList<BodyPart>();
 
+        if(inputStream == null || contentType == null)
+        {
+            L.e("InputStream has been null or missing Content-Type in multipart response");
+            return bodyParts;
+        }
 
         if (!(inputStream instanceof ByteArrayInputStream) &&
                 !(inputStream instanceof BufferedInputStream))
@@ -114,6 +120,7 @@ public class MultipartParser
                     // accumulate the preamble
                     if (preamblesb == null)
                         preamblesb = new StringBuffer(line.length() + 2);
+
                     preamblesb.append(line).append(lineSeparator);
                 }
             }
