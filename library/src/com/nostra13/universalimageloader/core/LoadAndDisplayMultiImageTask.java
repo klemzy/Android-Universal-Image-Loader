@@ -2,6 +2,7 @@ package com.nostra13.universalimageloader.core;
 
 import android.graphics.Bitmap;
 import android.os.Handler;
+import android.util.SparseArray;
 import com.nostra13.universalimageloader.core.assist.*;
 import com.nostra13.universalimageloader.core.decode.ImageDecoder;
 import com.nostra13.universalimageloader.core.decode.ImageDecodingInfo;
@@ -22,10 +23,7 @@ import org.json.JSONObject;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URLEncoder;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -381,6 +379,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
 
         log("Received " + bodyParts.size() + " of multipart/mixed parts");
 
+        SparseArray<BodyPart> bodyPartMap = new SparseArray<BodyPart>();
         for (BodyPart bodyPart : bodyParts)
         {
             Map<String, String> perImageParams = new TreeMap<String, String>();
@@ -431,19 +430,22 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
                 continue;
             }
 
-            //There can be multiple requests for same image
-            for (ImageServeInfo info : loadingInfoList)
-            {
-                Bitmap bitmap = getBitmap(info);
-                if (bitmap != null)
-                {
-                    displayBitmapTask(bitmap, info);
-                    continue;
-                }
+            bodyPartMap.put(perImageParams.hashCode(), bodyPart);
+        }
 
-                if (info.imageServeParams.hashCode() == perImageParams.hashCode())
-                    displayImage(bodyPart.getData(), info);
+
+        //There can be multiple requests for same image
+        for (ImageServeInfo info : loadingInfoList)
+        {
+            Bitmap bitmap = getBitmap(info);
+            if (bitmap != null)
+            {
+                displayBitmapTask(bitmap, info);
+                continue;
             }
+
+            BodyPart bodyPart = bodyPartMap.get(info.imageServeParams.hashCode());
+            if(bodyPart != null) displayImage(bodyPart.getData(), info);
         }
     }
 
