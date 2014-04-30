@@ -1,15 +1,15 @@
 package com.nostra13.universalimageloader.core;
 
 import org.json.JSONException;
-import org.json.JSONObject;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mockito;
-import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * IntelliJ IDEA.
@@ -61,4 +61,7 @@ public class LoadAndDisplayMultiImageTaskTest
 
         Assert.assertEquals(X_IDDICTION_LIST_HEADER, jsonHeader);
     }
+
+
+
 }

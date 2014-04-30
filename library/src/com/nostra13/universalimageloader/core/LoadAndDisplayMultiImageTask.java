@@ -180,7 +180,9 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         {
             String imageRequests = convertToJsonString(loadingInfoList);
             String hashString = StringUtils.sha256(ACCEPT_HEADER + "#" + imageRequests);
-            downloadImagesAndParseResponse(IMAGE_URL + "?hash=" + URLEncoder.encode(hashString, "UTF-8"), imageRequests);
+            List<BodyPart> bodyParts = downloadImagesAndParseResponse(IMAGE_URL + "?hash=" + URLEncoder.encode(hashString, "UTF-8"), imageRequests);
+            SparseArray<BodyPart> bodyPartMap = createBodyPartMap(bodyParts);
+            displayImages(bodyPartMap, loadingInfoList);
         }
         catch (JSONException e)
         {
@@ -207,9 +209,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         Bitmap bmp = configuration.memoryCache.get(memoryCacheKey);
         if (bmp == null)
         {
-            long start = System.currentTimeMillis();
             bmp = tryLoadBitmapFromDisk(loadingInfo);
-            log("TIME Load bitmap from disk: " + (System.currentTimeMillis() - start));
 
             if (bmp == null) return null;
 
@@ -360,10 +360,11 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
      *
      * @param uri          Uri of service that serves multiple images
      * @param requestsJson Json of all images (uri and params) that should be returned
+     * @return List of images represented as BodyPart
      * @throws IOException
      * @throws TaskCancelledException
      */
-    void downloadImagesAndParseResponse(final String uri, String requestsJson) throws IOException, TaskCancelledException
+    List<BodyPart> downloadImagesAndParseResponse(final String uri, String requestsJson) throws IOException, TaskCancelledException
     {
         final DownloadExtra downloadExtra = new DownloadExtra();
         downloadExtra.setHeader("Accept", ACCEPT_HEADER);
@@ -379,20 +380,15 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
             }
         });
 
-        long start = System.currentTimeMillis();
         InputStream inputStream = getDownloader().getStream(uri, downloadExtra);
-        log("TIME Load bitmaps from network: " + (System.currentTimeMillis() - start));
 
-        start = System.currentTimeMillis();
         MultipartParser parser = new MultipartParser(inputStream, contentType);
-        log("TIME Parse bitmaps from response: " + (System.currentTimeMillis() - start));
 
         List<BodyPart> bodyParts = parser.parse();
 
         log("Received " + bodyParts.size() + " of multipart/mixed parts");
 
-        SparseArray<BodyPart> bodyPartMap = createBodyPartMap(bodyParts);
-        displayImages(bodyPartMap, loadingInfoList);
+        return bodyParts;
     }
 
     /**
@@ -466,9 +462,8 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
      * will not be in memory/disk at this point. However if there have been multiple requests for the same image but different
      * view then try to load image from memory/disk.
      *
-     * @param bodyPartMap Map of BodyParts that is used to match request with BodyPart
+     * @param bodyPartMap     Map of BodyParts that is used to match request with BodyPart
      * @param loadingInfoList List of requests
-     *
      * @throws TaskCancelledException
      * @throws IOException
      */
@@ -493,10 +488,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         boolean cachedToDisc;
         try
         {
-            long start = System.currentTimeMillis();
             boolean cacheResult = tryCacheImageOnDisk(loadingInfo, imageBinary);
-            log("TIME Save bitmap to disk: " + (System.currentTimeMillis() - start));
-
             cachedToDisc = loadingInfo.options.isCacheOnDisk() && cacheResult;
         }
         catch (TaskCancelledException e)
