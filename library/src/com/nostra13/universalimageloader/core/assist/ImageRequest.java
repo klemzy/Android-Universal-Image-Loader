@@ -28,7 +28,6 @@ public abstract class ImageRequest
     {
         this.uri = uri;
         this.transparent = false;
-        this.params = new ImageServeParams();
     }
 
     public void setDisplayImageOptions(final DisplayImageOptions displayImageOptions)

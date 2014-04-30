@@ -4,7 +4,6 @@ import android.os.Build;
 import com.nostra13.universalimageloader.core.assist.ImageFormat;
 import com.nostra13.universalimageloader.core.assist.ImageServeParams;
 import com.nostra13.universalimageloader.core.assist.ViewScaleType;
-import com.sun.istack.internal.NotNull;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 
@@ -47,57 +46,98 @@ public class ImageServeUtil
             outUri.append(path);
 
             boolean isFirst = true;
-            boolean hasQuality = false;
+            boolean sizeParamsHandled = false;
 
-            String fit = null;
-            String fill = null;
-            String thumb = null;
+            String delimiter = isFirst ? "?" : "&";
+
+            //If no scale type of width/height has been requested keep original params
+            if (viewScaleType != null && width > 0 && height > 0)
+            {
+                sizeParamsHandled = true;
+                isFirst = false;
+
+                if (viewScaleType == ViewScaleType.CROP)
+                {
+                    //If crop then get fill picture and take smaller edge
+                    String paramName = "fill";
+                    String paramValue = String.valueOf(width > height ? height : width);
+                    addParamToUrl(outUri, paramName, paramValue, delimiter);
+                }
+                else if (viewScaleType == ViewScaleType.FIT_INSIDE)
+                {
+                    //If fill then get fit picture and take larger edge
+                    String paramName = "fit";
+                    String paramValue = String.valueOf(width > height ? width : height);
+                    addParamToUrl(outUri, paramName, paramValue, delimiter);
+                }
+
+            }
+
+            boolean hasQuality = false;
+            boolean hasBlur = false;
+            boolean hasRecApp = false;
+
+            if (params != null && params.getBlur() != -1)
+            {
+                delimiter = isFirst ? "?" : "&";
+                addParamToUrl(outUri, "blur", String.valueOf(params.getBlur()), delimiter);
+                hasBlur = true;
+                isFirst = false;
+            }
+
+            if (params != null && params.getQuality() != -1)
+            {
+                delimiter = isFirst ? "?" : "&";
+                addParamToUrl(outUri, "q", String.valueOf(params.getQuality()), delimiter);
+                hasQuality = true;
+                isFirst = false;
+            }
+
+            if (params != null && params.isRecApp())
+            {
+                delimiter = isFirst ? "?" : "&";
+                addParamToUrl(outUri, "recapp", String.valueOf(params.isRecApp()), delimiter);
+                hasRecApp = true;
+                isFirst = false;
+            }
 
             for (NameValuePair param : URLEncodedUtils.parse(currentUri, "UTF-8"))
             {
-                // Ignore fit, fill, thumb and out parameters however remember params in case new parameters are not added
-                boolean cont = false;
-                if (param.getName().equals("fit"))
-                {
-                    cont = true;
-                    fit = param.getValue();
-                }
-                else if (param.getName().equals("fill"))
-                {
-                    cont = true;
-                    fill = param.getValue();
-                }
-                else if (param.getName().equals("thumb"))
-                {
-                    cont = true;
-                    thumb = param.getValue();
-                }
-                else if (param.getName().equals("out"))
-                {
-                    cont = true;
-                }
-
-                if (cont)
-                    continue;
-
-                if (param.getName().equals("q")) hasQuality = true;
-
-                String delimiter = isFirst ? "?" : "&";
+                delimiter = isFirst ? "?" : "&";
                 isFirst = false;
 
-                //Replace current parameter with parameter value from ImageServeParams if there is one set
-                if (params != null && params.getBlur() != -1 && param.getName().equals("blur"))
+                //Size params were not handled so apply params that were added originally
+                if (param.getName().equals("fit") || param.getName().equals("fill") || param.getName().equals("thumb"))
                 {
-                    addParamToUrl(outUri, "blur", String.valueOf(params.getBlur()), delimiter);
+                    if(!sizeParamsHandled)
+                    {
+                        addParamToUrl(outUri, param.getName(), param.getValue(), delimiter);
+                        isFirst = false;
+                    }
+
+                    continue;
                 }
-                else if (params != null && params.getQuality() != -1 && param.getName().equals("q"))
+
+                if (param.getName().equals("out")) continue;
+
+                //If matching parameter hasnt been set yet from ImageParams then try to keep original
+                if (param.getName().equals("blur"))
                 {
-                    addParamToUrl(outUri, "q", String.valueOf(params.getQuality()), delimiter);
+                    if(!hasBlur)
+                        addParamToUrl(outUri, param.getName(), param.getValue(), delimiter);
+                }
+                else if (param.getName().equals("q"))
+                {
+
+                    if(!hasQuality)
+                        addParamToUrl(outUri, param.getName(), param.getValue(), delimiter);
+
                     hasQuality = true;
                 }
-                else if (params != null && params.isRecApp() && param.getName().equals("recapp"))
+                else if (param.getName().equals("recapp"))
                 {
-                    addParamToUrl(outUri, "recapp", String.valueOf(params.isRecApp()), delimiter);
+                    if(!hasRecApp)
+                        addParamToUrl(outUri, param.getName(), param.getValue(), delimiter);
                 }
                 else
                 {
@@ -105,48 +145,18 @@ public class ImageServeUtil
                 }
             }
 
+            delimiter = isFirst ? "?" : "&";
+            isFirst = false;
+
             //ImageServe returns q=100 if no quality speficied. Add q=100 if there isnt one already in original uri
             if (!hasQuality)
-                addParamToUrl(outUri, "q", "100", "&");
+                addParamToUrl(outUri, "q", "100", delimiter);
 
-            //If no scale type of width/height has been requested keep original params
-            if (viewScaleType != null && width > 0 && height > 0)
-            {
-                @NotNull
-                String paramName = null;
-                @NotNull
-                String paramValue = null;
-
-                if (viewScaleType == ViewScaleType.CROP)
-                {
-                    //If crop then get fill picture and take smaller edge
-                    paramName = "fill";
-                    paramValue = String.valueOf(width > height ? height : width);
-                }
-                else if (viewScaleType == ViewScaleType.FIT_INSIDE)
-                {
-                    //If fill then get fit picture and take larger edge
-                    paramName = "fit";
-                    paramValue = String.valueOf(width > height ? width : height);
-                }
-
-                addParamToUrl(outUri, paramName, paramValue, "&");
-            }
-            else
-            {
-                if (fit != null)
-                    addParamToUrl(outUri, "fit", fit, "&");
-
-                if (fill != null)
-                    addParamToUrl(outUri, "fill", fill, "&");
-
-                if (thumb != null)
-                    addParamToUrl(outUri, "thumb", thumb, "&");
-            }
+            delimiter = isFirst ? "?" : "&";
 
             //If specific format hasnt been requested then calculate format based on transparency and Android API version
             String format = params != null && params.getImageFormat() != null ? params.getImageFormat().toString() : getImageFormat(trasparent, apiVersion);
-            addParamToUrl(outUri, "out", format, "&");
+            addParamToUrl(outUri, "out", format, delimiter);
 
         }
         catch (URISyntaxException e)
