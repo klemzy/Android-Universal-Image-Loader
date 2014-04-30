@@ -40,8 +40,6 @@
 
 package com.nostra13.universalimageloader.core.multipart;
 
-import com.sun.xml.internal.messaging.saaj.packaging.mime.MessagingException;
-
 import javax.activation.DataHandler;
 import javax.activation.DataSource;
 import java.io.*;
@@ -306,7 +304,7 @@ public class MimeUtility {
      * @return			decoded input stream.
      */
     public static InputStream decode(InputStream is, String encoding)
-		throws MessagingException {
+		throws IOException {
 	if (encoding.equalsIgnoreCase("base64"))
 	    return new BASE64DecoderStream(is);
 	else if (encoding.equalsIgnoreCase("quoted-printable"))
@@ -320,7 +318,7 @@ public class MimeUtility {
 		 encoding.equalsIgnoreCase("8bit"))
 	    return is;
 	else
-	    throw new MessagingException("Unknown encoding: " + encoding);
+	    throw new IOException("Unknown encoding: " + encoding);
     }
 
     /**
@@ -335,7 +333,7 @@ public class MimeUtility {
      *				specified encoding.
      */
     public static OutputStream encode(OutputStream os, String encoding)
-		throws MessagingException
+		throws IOException
     {
         if (encoding == null)
 	    return os;
@@ -352,7 +350,7 @@ public class MimeUtility {
 		 encoding.equalsIgnoreCase("8bit"))
 	    return os;
 	else
-	    throw new MessagingException("Unknown encoding: " +encoding);
+	    throw new IOException("Unknown encoding: " +encoding);
     }
 
     /**
@@ -373,7 +371,7 @@ public class MimeUtility {
      */
     public static OutputStream encode(OutputStream os, String encoding,
                                       String filename)
-                throws MessagingException {
+                throws IOException {
         if (encoding == null)
             return os;
         else if (encoding.equalsIgnoreCase("base64"))
@@ -389,7 +387,7 @@ public class MimeUtility {
                  encoding.equalsIgnoreCase("8bit"))
             return os;
         else
-            throw new MessagingException("Unknown encoding: " +encoding);
+            throw new IOException("Unknown encoding: " +encoding);
     }
 
     /**
