@@ -16,12 +16,12 @@ public class BodyPart
     public BodyPart(InternetHeaders headers, byte[] data)
     {
         this.headers = headers;
-        this.data = data;
+        this.data = data.clone();
     }
 
     public byte[] getData()
     {
-        return data;
+        return data.clone();
     }
 
     public InternetHeaders getHeaders()

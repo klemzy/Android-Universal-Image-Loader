@@ -4,6 +4,7 @@ import android.os.Build;
 import com.nostra13.universalimageloader.core.assist.ImageFormat;
 import com.nostra13.universalimageloader.core.assist.ImageServeParams;
 import com.nostra13.universalimageloader.core.assist.ViewScaleType;
+import com.sun.istack.internal.NotNull;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 
@@ -111,8 +112,11 @@ public class ImageServeUtil
             //If no scale type of width/height has been requested keep original params
             if (viewScaleType != null && width > 0 && height > 0)
             {
+                @NotNull
                 String paramName = null;
+                @NotNull
                 String paramValue = null;
+
                 if (viewScaleType == ViewScaleType.CROP)
                 {
                     //If crop then get fill picture and take smaller edge

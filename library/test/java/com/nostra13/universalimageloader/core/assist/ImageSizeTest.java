@@ -1,5 +1,10 @@
 package com.nostra13.universalimageloader.core.assist;
 
+import android.content.Context;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 import com.nostra13.universalimageloader.core.imageaware.ImageAware;
 import com.nostra13.universalimageloader.core.imageaware.ImageViewAware;
 import com.nostra13.universalimageloader.utils.ImageSizeUtils;
@@ -7,27 +12,20 @@ import org.fest.assertions.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
-
-import android.app.Activity;
-import android.content.Context;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.FrameLayout;
-import android.widget.ImageView;
 
 @RunWith(RobolectricTestRunner.class)
 public class ImageSizeTest {
-	private Activity mActivity;
+
 	private ImageView mView;
 	private ImageAware mImageAware;
 
 	@Before
 	public void setUp() throws Exception {
-		mActivity = new Activity();
 
 		// Make and set view with some prelim values to test
-		mView = new TestImageView(mActivity);
+		mView = new TestImageView(Robolectric.getShadowApplication().getApplicationContext());
 		mView.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 		mView.measure(View.MeasureSpec.makeMeasureSpec(250, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(250, View.MeasureSpec.EXACTLY));
 

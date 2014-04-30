@@ -180,7 +180,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
         {
             String imageRequests = convertToJsonString(loadingInfoList);
             String hashString = StringUtils.sha256(ACCEPT_HEADER + "#" + imageRequests);
-            List<BodyPart> bodyParts = downloadImagesAndParseResponse(IMAGE_URL + "?hash=" + URLEncoder.encode(hashString, "UTF-8"), imageRequests);
+            List<BodyPart> bodyParts = downloadAndParseResponse(IMAGE_URL + "?hash=" + URLEncoder.encode(hashString, "UTF-8"), imageRequests);
             SparseArray<BodyPart> bodyPartMap = createBodyPartMap(bodyParts);
             displayImages(bodyPartMap, loadingInfoList);
         }
@@ -364,7 +364,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
      * @throws IOException
      * @throws TaskCancelledException
      */
-    List<BodyPart> downloadImagesAndParseResponse(final String uri, String requestsJson) throws IOException, TaskCancelledException
+    List<BodyPart> downloadAndParseResponse(final String uri, String requestsJson) throws IOException, TaskCancelledException
     {
         final DownloadExtra downloadExtra = new DownloadExtra();
         downloadExtra.setHeader("Accept", ACCEPT_HEADER);
@@ -669,7 +669,7 @@ public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListe
                     log(LOG_WAITING_FOR_RESUME);
                     try
                     {
-                        engine.getPauseLock().wait();
+                        while(pause.get()) engine.getPauseLock().wait();
                     }
                     catch (InterruptedException e)
                     {

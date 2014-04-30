@@ -551,7 +551,7 @@ public class MimeUtility {
 		    // possibly decode inner encoded words
 		    if (!decodeStrict) {
 			String dword = decodeInnerWords(word);
-			if (dword != word) {
+			if (!dword.equals(word)) {
 			    // if a different String object was returned,
 			    // decoding was done.
 			    if (prevWasEncoded && word.startsWith("=?")) {
