@@ -29,3 +29,12 @@ out/
 # Ignore gradle files
 .gradle/
 build/
+
+#Add only library
+CHANGELOG.md
+UniversalImageLoader.png
+android_eclipse_formatter.xml
+codeStyleSettings.xml
+downloads/
+pom.xml
+sample
