@@ -42,12 +42,14 @@ If you have some **issues on migration** to newer library version - be sure to a
     </repository>
 </repositories>
 
+<dependencies>
+	<dependency>
+		<groupId>com.iddiction.imageserve</groupId>
+		<artifactId>image-serve</artifactId>
+		<version>1.0</version>
+	</dependency>
+</dependencies>
 
-<dependency>
-	<groupId>com.iddiction.imageserve</groupId>
-	<artifactId>image-serve</artifactId>
-	<version>1.0</version>
-</dependency>
 ```
 
 #### 2. Android Manifest
