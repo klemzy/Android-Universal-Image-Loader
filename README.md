@@ -129,19 +129,9 @@ DisplayImageOptions options = new DisplayImageOptions.Builder()
 		.build();
 ```
 
-## Usage
+## ImageServe
 
-### Acceptable URIs examples
-``` java
-String imageUri = "http://site.com/image.png"; // from Web
-String imageUri = "file:///mnt/sdcard/image.png"; // from SD card
-String imageUri = "content://media/external/audio/albumart/13"; // from content provider
-String imageUri = "assets://image.png"; // from assets
-String imageUri = "drawable://" + R.drawable.image; // from drawables (only images, non-9patch)
-```
-**NOTE:** Use `drawable://` only if you really need it! Always **consider the native way** to load drawables - `ImageView.setImageResource(...)` instead of using of `ImageServe`.
-
-`ImageServe` is extened class of `ImageLoader` that provides serving of images through requests. The suggested usage is through `ImageRequest (LoadImageRequest and DisplayImageRequest)`, however images can also be loaded without using `ImageRequest`. 
+`ImageServe` is extended class of `ImageLoader` that provides serving of images through requests. The suggested usage is through `ImageRequest (LoadImageRequest and DisplayImageRequest)`, however images can also be loaded without using `ImageRequest`. 
 
 Use `LoadImageRequest` for loading image
 Use `DisplayImageRequest` for loading and displaying image
@@ -162,6 +152,19 @@ request.setImageFormat(ImageFormat) //default null
 ```
 
 **NOTE:** Default values are ignored when constructing image uri for ImageServe API (https://github.com/Iddiction/backend/wiki/ImageServe-API)
+
+
+## Usage
+
+### Acceptable URIs examples
+``` java
+String imageUri = "http://site.com/image.png"; // from Web
+String imageUri = "file:///mnt/sdcard/image.png"; // from SD card
+String imageUri = "content://media/external/audio/albumart/13"; // from content provider
+String imageUri = "assets://image.png"; // from assets
+String imageUri = "drawable://" + R.drawable.image; // from drawables (only images, non-9patch)
+```
+**NOTE:** Use `drawable://` only if you really need it! Always **consider the native way** to load drawables - `ImageView.setImageResource(...)` instead of using of `ImageServe`.
 
 ### Usage with `ImageRequest`
 
