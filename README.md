@@ -134,6 +134,7 @@ DisplayImageOptions options = new DisplayImageOptions.Builder()
 `ImageServe` is extended class of `ImageLoader` that provides serving of images through requests. The suggested usage is through `ImageRequest (LoadImageRequest and DisplayImageRequest)`, however images can also be loaded without using `ImageRequest`. 
 
 Use `LoadImageRequest` for loading image
+
 Use `DisplayImageRequest` for loading and displaying image
 
 Set `DisplayImageOptions` and `LoadingImageListener` through `ImageRequest`. `ImageRequst` also accepts `blur`, `quality`, `recapp` parameters which enable additional settings for returned image through ImageServe API (https://github.com/Iddiction/backend/wiki/ImageServe-API). `ImageFormat (PNG, JPEG, WEBP)` can also be provided set on `ImageRequest`. That way specific format will be requested, otherwise `ImageFormat` is calculated based on Android API version and flag whether image can be transparent or not `ImageRequest.setTransparent`.
