@@ -24,14 +24,13 @@ public class MultipartParserTest
     @Test
     public void testParseMultipartResponse() throws IOException
     {
-        InputStream inputStream = null;
-        String contentType = null;
-
-        MultipartParser parser = new MultipartParser(inputStream, contentType);
+        MultipartParser parser = new MultipartParser(null, null);
         Assert.assertEquals(0, parser.parse().size());
 
-        inputStream = MultipartParserTest.class.getResourceAsStream("/multipart-response");
-        contentType = CONTENT_TYPE_HEADER;
+        InputStream inputStream = MultipartParserTest.class.getResourceAsStream("/multipart-response");
+        Assert.assertNotNull(inputStream);
+
+        String contentType = CONTENT_TYPE_HEADER;
 
         parser = new MultipartParser(inputStream, contentType);
         List<BodyPart> bodyParts = parser.parse();
@@ -43,9 +42,11 @@ public class MultipartParserTest
     public void testParseMultipartResponseCorruptBody() throws IOException
     {
         InputStream inputStream = MultipartParserTest.class.getResourceAsStream("/multipart-response-corrupt");
+        Assert.assertNotNull(inputStream);
 
         MultipartParser parser = new MultipartParser(inputStream, CONTENT_TYPE_HEADER);
         List<BodyPart> bodyParts = parser.parse();
+
         Assert.assertEquals(0, bodyParts.size());
     }
 
@@ -54,6 +55,8 @@ public class MultipartParserTest
     {
         //Parsing can figure out boundary even if there wasnt one passed in Content-Type header
         InputStream inputStream = MultipartParserTest.class.getResourceAsStream("/multipart-response");
+        Assert.assertNotNull(inputStream);
+
         String contentType = "multipart/mixed";
 
         MultipartParser parser = new MultipartParser(inputStream, contentType);
@@ -65,6 +68,8 @@ public class MultipartParserTest
     public void testMultipartResponseWrongBoundary() throws IOException
     {
         InputStream inputStream = MultipartParserTest.class.getResourceAsStream("/multipart-response");
+        Assert.assertNotNull(inputStream);
+
         String contentType = "multipart/mixed; boundary=--------------------145ad5d";
 
         MultipartParser parser = new MultipartParser(inputStream, contentType);

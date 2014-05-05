@@ -87,12 +87,22 @@ public class ImageServe extends ImageLoader
         ImageAware imageAware = request.getImageAware();
         ImageLoadingListener listener = request.getLoadingListener();
         DisplayImageOptions options = request.getDisplayImageOptions();
-        String uri = ImageServeUtil.getProcessedImageUri(request.getUri(), imageAware.getWidth(), imageAware.getHeight(), request.isTransparent(), request.getParams(), imageAware.getScaleType());
+        String uri = ImageServeUtil.getProcessedImageUri(
+                request.getUri(),
+                imageAware.getWidth(),
+                imageAware.getHeight(),
+                request.isTransparent(),
+                request.getBlur(),
+                request.getImageQuality(),
+                request.isRecommendedApps(),
+                request.getImageFormat(),
+                imageAware.getScaleType());
 
         if (listener == null)
         {
             listener = emptyListener;
         }
+
         if (options == null)
         {
             options = configuration.defaultDisplayImageOptions;

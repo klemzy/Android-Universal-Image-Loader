@@ -2,7 +2,6 @@ package com.nostra13.universalimageloader.utils;
 
 import android.os.Build;
 import com.nostra13.universalimageloader.core.assist.ImageFormat;
-import com.nostra13.universalimageloader.core.assist.ImageServeParams;
 import com.nostra13.universalimageloader.core.assist.ViewScaleType;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
@@ -26,7 +25,7 @@ public class ImageServeUtil
     static int apiVersion = Build.VERSION.SDK_INT;
 
 
-    public static String getProcessedImageUri(String uri, int width, int height, boolean trasparent, ImageServeParams params, ViewScaleType viewScaleType)
+    public static String getProcessedImageUri(String uri, int width, int height, boolean trasparent, int blur, int quality, boolean recommendedApp, ImageFormat imageFormat, ViewScaleType viewScaleType)
     {
         // Check if the path is as expected
         if (!(uri.contains("blob-key") && uri.contains("imageserve") && uri.contains("http"))) return uri;
@@ -70,46 +69,40 @@ public class ImageServeUtil
                     String paramValue = String.valueOf(width > height ? width : height);
                     addParamToUrl(outUri, paramName, paramValue, delimiter);
                 }
-
             }
 
             boolean hasQuality = false;
             boolean hasBlur = false;
-            boolean hasRecApp = false;
 
-            if (params != null && params.getBlur() != -1)
+            if (blur != -1)
             {
                 delimiter = isFirst ? "?" : "&";
-                addParamToUrl(outUri, "blur", String.valueOf(params.getBlur()), delimiter);
+                addParamToUrl(outUri, "blur", String.valueOf(blur), delimiter);
                 hasBlur = true;
                 isFirst = false;
             }
 
-            if (params != null && params.getQuality() != -1)
+            if (quality != -1)
             {
                 delimiter = isFirst ? "?" : "&";
-                addParamToUrl(outUri, "q", String.valueOf(params.getQuality()), delimiter);
+                addParamToUrl(outUri, "q", String.valueOf(quality), delimiter);
                 hasQuality = true;
                 isFirst = false;
             }
 
-            if (params != null && params.isRecApp())
-            {
-                delimiter = isFirst ? "?" : "&";
-                addParamToUrl(outUri, "recapp", String.valueOf(params.isRecApp()), delimiter);
-                hasRecApp = true;
-                isFirst = false;
-            }
+            delimiter = isFirst ? "?" : "&";
+            addParamToUrl(outUri, "recapp", String.valueOf(recommendedApp), delimiter);
+            isFirst = false;
+
+            delimiter = "&";
 
             for (NameValuePair param : URLEncodedUtils.parse(currentUri, "UTF-8"))
             {
-                delimiter = isFirst ? "?" : "&";
-                isFirst = false;
 
                 //Size params were not handled so apply params that were added originally
                 if (param.getName().equals("fit") || param.getName().equals("fill") || param.getName().equals("thumb"))
                 {
-                    if(!sizeParamsHandled)
+                    if (!sizeParamsHandled)
                     {
                         addParamToUrl(outUri, param.getName(), param.getValue(), delimiter);
                         isFirst = false;
@@ -118,25 +111,19 @@ public class ImageServeUtil
                     continue;
                 }
 
-                if (param.getName().equals("out")) continue;
+                //Out parameter is handled at the end, recapp is always handled
+                if (param.getName().equals("out") || param.getName().equals("recapp")) continue;
+
 
                 //If matching parameter hasnt been set yet from ImageParams then try to keep original
                 if (param.getName().equals("blur"))
                 {
-                    if(!hasBlur)
+                    if (!hasBlur)
                         addParamToUrl(outUri, param.getName(), param.getValue(), delimiter);
                 }
                 else if (param.getName().equals("q"))
                 {
-
-                    if(!hasQuality)
-                        addParamToUrl(outUri, param.getName(), param.getValue(), delimiter);
-
-                    hasQuality = true;
-                }
-                else if (param.getName().equals("recapp"))
-                {
-                    if(!hasRecApp)
+                    if (!hasQuality)
                         addParamToUrl(outUri, param.getName(), param.getValue(), delimiter);
                 }
                 else
@@ -146,16 +133,9 @@ public class ImageServeUtil
             }
 
             delimiter = isFirst ? "?" : "&";
-            isFirst = false;
-
-            //ImageServe returns q=100 if no quality speficied. Add q=100 if there isnt one already in original uri
-            if (!hasQuality)
-                addParamToUrl(outUri, "q", "100", delimiter);
-
-            delimiter = isFirst ? "?" : "&";
 
             //If specific format hasnt been requested then calculate format based on transparency and Android API version
-            String format = params != null && params.getImageFormat() != null ? params.getImageFormat().toString() : getImageFormat(trasparent, apiVersion);
+            String format = imageFormat != null ? imageFormat.toString() : getImageFormat(trasparent, apiVersion);
             addParamToUrl(outUri, "out", format, delimiter);
 
         }

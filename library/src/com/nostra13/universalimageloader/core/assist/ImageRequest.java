@@ -19,15 +19,24 @@ public abstract class ImageRequest
 
     private ImageLoadingListener loadingListener = null;
 
-    private ImageServeParams params;
-
     private boolean transparent;
 
+    private int blur;
+
+    private int imageQuality;
+
+    private boolean recommendedApps;
+
+    private ImageFormat imageFormat;
 
     public ImageRequest(String uri)
     {
         this.uri = uri;
         this.transparent = false;
+        this.blur = -1;
+        this.imageQuality = -1;
+        this.recommendedApps = false;
+        this.imageFormat = null;
     }
 
     public void setDisplayImageOptions(final DisplayImageOptions displayImageOptions)
@@ -66,15 +75,45 @@ public abstract class ImageRequest
         return transparent;
     }
 
-    public void setParams(final ImageServeParams params)
+    public void setBlur(final int blur)
     {
-        this.params = params;
+        this.blur = blur;
     }
 
-    public ImageServeParams getParams()
+    public int getBlur()
     {
-        return params;
+        return blur;
+    }
+
+    public void setImageQuality(final int imageQuality)
+    {
+        this.imageQuality = imageQuality;
+    }
+
+    public int getImageQuality()
+    {
+        return imageQuality;
+    }
+
+    public void setRecommendedApps(final boolean recommendedApps)
+    {
+        this.recommendedApps = recommendedApps;
+    }
+
+    public boolean isRecommendedApps()
+    {
+        return recommendedApps;
     }
 
     public abstract ImageAware getImageAware();
+
+    public void setImageFormat(final ImageFormat imageFormat)
+    {
+        this.imageFormat = imageFormat;
+    }
+
+    public ImageFormat getImageFormat()
+    {
+        return imageFormat;
+    }
 }

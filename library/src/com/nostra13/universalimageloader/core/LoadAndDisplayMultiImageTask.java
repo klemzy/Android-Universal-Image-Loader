@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class LoadAndDisplayMultiImageTask implements Runnable, IoUtils.CopyListener
 {
 
-    private static final String IMAGE_URL = "http://images.idd-backend.appspot.com/imageserveV2";
+    private static final String IMAGE_URL = "http://v2.images.backend.iddiction.com/imageserveV2";
 
     private static final String ACCEPT_HEADER = "multipart/mixed";
 
