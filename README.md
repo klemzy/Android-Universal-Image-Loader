@@ -1,4 +1,4 @@
-Robust image loading library based on [Universal Image Loader](https://github.com/nostra13/Android-Universal-Image-Loader) with added suport for multipart downloading of images.
+Robust image loading library based on [Universal Image Loader](https://github.com/nostra13/Android-Universal-Image-Loader) with support for multipart downloading of images.
 
 This project aims to provide a reusable instrument for asynchronous image loading, caching and displaying. It is originally based on [Fedor Vlasov's project](https://github.com/thest1/LazyList) and has been vastly refactored and improved since then.
 
@@ -32,7 +32,7 @@ If you have some **issues on migration** to newer library version - be sure to a
 ## Quick Setup
 
 
-#### 1. Maven dependency:**
+#### 1. Maven dependency:
 ``` xml
 <dependency>
 	<groupId>com.iddiction.imageserve</groupId>
@@ -141,14 +141,54 @@ String imageUri = "drawable://" + R.drawable.image; // from drawables (only imag
 ```
 **NOTE:** Use `drawable://` only if you really need it! Always **consider the native way** to load drawables - `ImageView.setImageResource(...)` instead of using of `ImageServe`.
 
-##ImageServe is extended class of ImageLoader class. It enables all the ImageLoader usages that are provided below. However the suggested usage is through `ImageRequest (LoadImageRequest and DisplayImageRequest)`
+`ImageServe` is extened class of `ImageLoader` that provides serving of images through requests. The suggested usage is through `ImageRequest (LoadImageRequest and DisplayImageRequest)`, however images can also be loaded without using `ImageRequest`. 
 
 Use `LoadImageRequest` for loading image
 Use `DisplayImageRequest` for loading and displaying image
 
-Set `DisplayImageOptions` and `LoadingImageListener` through `ImageRequest`. `ImageRequst` also accepts `blur`, `quality`, `recapp` parameters which enable additional settings for returned image through ImageServe API (https://github.com/Iddiction/backend/wiki/ImageServe-API). `ImageFormat (PNG, JPEG, WEBP)` can also be provided set on `ImageRequest`. That way specific format will be requested, otherwise `ImageFormat` is calculated based on Android API version and transparency.
+Set `DisplayImageOptions` and `LoadingImageListener` through `ImageRequest`. `ImageRequst` also accepts `blur`, `quality`, `recapp` parameters which enable additional settings for returned image through ImageServe API (https://github.com/Iddiction/backend/wiki/ImageServe-API). `ImageFormat (PNG, JPEG, WEBP)` can also be provided set on `ImageRequest`. That way specific format will be requested, otherwise `ImageFormat` is calculated based on Android API version and flag whether image can be transparent or not `ImageRequest.setTransparent`.
 
 Difference between `LoadImageRequest` and `DisplayImageRequest` is that first one accepts the height, width and scale type `ViewScaleType (CROP and FIT_INSIDE), the second one accepts `ImageView` and gets this parameters from view.
+
+`DisplayImageRequest` available params
+```java
+ImageRequest request = new DisplayImageRequest(uri, imageview); / new LoadImageRequest(url, width, height, ViewScaleType)
+request.setBlur(10); // default -1
+request.setImageQuality(70); // default -1
+request.setTransparent(boolean) // default false
+request.setLoadingListener(ImageLoadingListener) // default empty listener
+request.setDisplayImageOptions(DisplayImageOptions) // default DisplayImageOptions from default configuration
+request.setImageFormat(ImageFormat) //default null
+```
+
+**NOTE:** Default values are ignored when constructing image uri for ImageServe API (https://github.com/Iddiction/backend/wiki/ImageServe-API)
+
+### Usage with `ImageRequest`
+
+#### `DisplayImageRequest`
+```java
+DisplayImageRequest request = new DisplayImageRequest(uri, imageview);
+ImageServe.getInstance().displayImage(request);
+```
+
+#### `LoadImageRequest`
+``` java
+LoadImageRequest request = new LoadImageRequest(uri, 100, 100, ViewScaleType.CROP);
+ImageServe.getInstance().loadImage(request)
+```
+
+### Multipart loading
+``` java
+List<ImageRequest> list = new ArrayList<ImageRequest>();
+list.add(DisplayImageRequest);
+list.add(LoadImageRequest);
+
+ImageServe.getInstance().serveImages(list, loadSynchroniously);
+```
+
+**NOTE:** `ImageServe.serveImages` will download all images in requests in one response and then handle every request as single with all the parameters that were set. If `DisplayImageRequest` the it will display it, if `LoadImageRequest` then it will only load it. `ImageLoadingListener` will be called for every request.
+
+### Usage without `ImageRequest`
 
 ### Simple
 ``` java
