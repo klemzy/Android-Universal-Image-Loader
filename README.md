@@ -373,7 +373,7 @@ To provide caching on external storage (SD card) add following permission to And
 6. For disc cache configuration (`ImageLoaderConfiguration.discCache(...)`) you can use already prepared implementations:
  * `UnlimitedDiscCache` (The fastest cache, doesn't limit cache size) - **Used by default**
  * `LimitedAgeDiscCache` (Size-unlimited cache with limited files' lifetime. If age of cached file exceeds defined limit then it will be deleted from cache.)
- * `LruDiskCache` (Least recently used bitmap is deleted when cache size limit is exceeded) 
+ * `LruDiscCache` (Least recently used bitmap is deleted when cache size limit is exceeded) 
  **NOTE:** UnlimitedDiscCache is 30%-faster than other limited disc cache implementations.
 
 7. To display bitmap (`DisplayImageOptions.displayer(...)`) you can use already prepared implementations: 
