@@ -34,6 +34,15 @@ If you have some **issues on migration** to newer library version - be sure to a
 
 #### 1. Maven dependency:
 ``` xml
+<repositories>
+	<repository>
+        <id>android</id>
+        <name>Iddiction Inc. Nexus</name>
+        <url>http://nexus.iddiction.com/content/groups/android-group/</url>
+    </repository>
+</repositories>
+
+
 <dependency>
 	<groupId>com.iddiction.imageserve</groupId>
 	<artifactId>image-serve</artifactId>
