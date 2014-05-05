@@ -137,9 +137,9 @@ Use `LoadImageRequest` for loading image
 
 Use `DisplayImageRequest` for loading and displaying image
 
-Set `DisplayImageOptions` and `LoadingImageListener` through `ImageRequest`. `ImageRequst` also accepts `blur`, `quality`, `recapp` parameters which enable additional settings for returned image through ImageServe API (https://github.com/Iddiction/backend/wiki/ImageServe-API). `ImageFormat (PNG, JPEG, WEBP)` can also be provided set on `ImageRequest`. That way specific format will be requested, otherwise `ImageFormat` is calculated based on Android API version and flag whether image can be transparent or not `ImageRequest.setTransparent`.
+Set `DisplayImageOptions` and `LoadingImageListener` through `ImageRequest`. `ImageRequst` also accepts `blur`, `quality`, `recapp` parameters which enable additional settings for returned image through ImageServe API (https://github.com/Iddiction/backend/wiki/ImageServe-API). `ImageFormat (PNG, JPEG, WEBP)` can also be set on `ImageRequest`. That way specific format will be requested, otherwise `ImageFormat` is calculated based on Android API version and flag whether image can be transparent or not `ImageRequest.setTransparent`.
 
-Difference between `LoadImageRequest` and `DisplayImageRequest` is that first one accepts the height, width and scale type `ViewScaleType (CROP and FIT_INSIDE), the second one accepts `ImageView` and gets this parameters from view.
+Difference between `LoadImageRequest` and `DisplayImageRequest` is that first one accepts the height, width and scale type `ViewScaleType (CROP and FIT_INSIDE)`, the second one accepts `ImageView` and gets this parameters from view.
 
 `DisplayImageRequest` available params
 ```java
