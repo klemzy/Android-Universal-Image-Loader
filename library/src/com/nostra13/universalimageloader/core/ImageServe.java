@@ -63,12 +63,34 @@ public class ImageServe extends ImageLoader
 
     public void loadImage(LoadImageRequest imageRequest)
     {
-        displayImage(imageRequest.getUri(), imageRequest.getImageAware(), imageRequest.getDisplayImageOptions(), imageRequest.getLoadingListener());
+        String uri = ImageServeUtil.getProcessedImageUri(
+                imageRequest.getUri(),
+                imageRequest.getImageAware().getWidth(),
+                imageRequest.getImageAware().getHeight(),
+                imageRequest.isTransparent(),
+                imageRequest.getBlur(),
+                imageRequest.getImageQuality(),
+                imageRequest.isRecommendedApps(),
+                imageRequest.getImageFormat(),
+                imageRequest.getImageAware().getScaleType());
+
+        displayImage(uri, imageRequest.getImageAware(), imageRequest.getDisplayImageOptions(), imageRequest.getLoadingListener());
     }
 
     public void displayImage(DisplayImageRequest imageRequest)
     {
-        displayImage(imageRequest.getUri(), imageRequest.getImageAware(), imageRequest.getDisplayImageOptions(), imageRequest.getLoadingListener());
+        String uri = ImageServeUtil.getProcessedImageUri(
+                imageRequest.getUri(),
+                imageRequest.getImageAware().getWidth(),
+                imageRequest.getImageAware().getHeight(),
+                imageRequest.isTransparent(),
+                imageRequest.getBlur(),
+                imageRequest.getImageQuality(),
+                imageRequest.isRecommendedApps(),
+                imageRequest.getImageFormat(),
+                imageRequest.getImageAware().getScaleType());
+
+        displayImage(uri, imageRequest.getImageAware(), imageRequest.getDisplayImageOptions(), imageRequest.getLoadingListener());
     }
 
     public void cancelRequest(ImageRequest imageRequest)
