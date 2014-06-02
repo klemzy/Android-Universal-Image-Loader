@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.iddiction.imageserve</groupId>
     <artifactId>image-serve</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <packaging>jar</packaging>
     <name>Iddiction Image Serve</name>
 
@@ -44,6 +44,13 @@
         <!-- Robolectric -->
         <!-- These must be above Android so the dependency order is correct -->
         <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.11</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>com.squareup</groupId>
             <artifactId>fest-android</artifactId>
             <version>1.0.3</version>
@@ -54,13 +61,6 @@
             <groupId>org.robolectric</groupId>
             <artifactId>robolectric</artifactId>
             <version>2.2</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.11</version>
             <scope>test</scope>
         </dependency>
 
