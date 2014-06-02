@@ -100,7 +100,7 @@ public class ImageServeUtil
             {
 
                 //Size params were not handled so apply params that were added originally
-                if (param.getName().equals("fit") || param.getName().equals("fill") || param.getName().equals("thumb"))
+                if (param.getName().equals("fit") || param.getName().equals("fill") || param.getName().equals("thumb") || param.getName().equals("fitc") || param.getName().equals("fillc"))
                 {
                     if (!sizeParamsHandled)
                     {

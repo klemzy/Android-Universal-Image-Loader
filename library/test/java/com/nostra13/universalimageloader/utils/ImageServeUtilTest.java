@@ -64,12 +64,12 @@ public class ImageServeUtilTest
         //Image has to fit inside area so take larger edge
         uri = imageUri;
         processedUri = ImageServeUtil.getProcessedImageUri(uri, 150, 50, false, -1, -1, false, ImageFormat.WEBP, ViewScaleType.FIT_INSIDE);
-        Assert.assertTrue(processedUri.equals("http://images.backend.iddiction.com/imageserve?fit=150&recapp=false&v=201404141704&q=70&blob-key=AMIfv940OG-zgQtYE4nQAXMKAp7SvKDK8Q3ZTSDEiE5J_e6Ia05MPAy_thkQ5v0OdiQ7fNFhwRJ4xw9o4zJDcRMZv0EkD1z-r3nmqhLDdAMBgNdukofl31tzRKlbVWx8Drlij4ZVwRNKmSp_akQ1OsblYm9lf20UQA&out=webp"));
+        Assert.assertTrue(processedUri.equals("http://images.backend.iddiction.com/imageserve?fitc=150x50&recapp=false&v=201404141704&q=70&blob-key=AMIfv940OG-zgQtYE4nQAXMKAp7SvKDK8Q3ZTSDEiE5J_e6Ia05MPAy_thkQ5v0OdiQ7fNFhwRJ4xw9o4zJDcRMZv0EkD1z-r3nmqhLDdAMBgNdukofl31tzRKlbVWx8Drlij4ZVwRNKmSp_akQ1OsblYm9lf20UQA&out=webp"));
 
         //Image has to fill whole area so take smaller edge
         uri = imageUri;
         processedUri = ImageServeUtil.getProcessedImageUri(uri, 150, 45, false, -1, -1, false, ImageFormat.WEBP, ViewScaleType.CROP);
-        Assert.assertTrue(processedUri.equals("http://images.backend.iddiction.com/imageserve?fill=45&recapp=false&v=201404141704&q=70&blob-key=AMIfv940OG-zgQtYE4nQAXMKAp7SvKDK8Q3ZTSDEiE5J_e6Ia05MPAy_thkQ5v0OdiQ7fNFhwRJ4xw9o4zJDcRMZv0EkD1z-r3nmqhLDdAMBgNdukofl31tzRKlbVWx8Drlij4ZVwRNKmSp_akQ1OsblYm9lf20UQA&out=webp"));
+        Assert.assertTrue(processedUri.equals("http://images.backend.iddiction.com/imageserve?fillc=150x45&recapp=false&v=201404141704&q=70&blob-key=AMIfv940OG-zgQtYE4nQAXMKAp7SvKDK8Q3ZTSDEiE5J_e6Ia05MPAy_thkQ5v0OdiQ7fNFhwRJ4xw9o4zJDcRMZv0EkD1z-r3nmqhLDdAMBgNdukofl31tzRKlbVWx8Drlij4ZVwRNKmSp_akQ1OsblYm9lf20UQA&out=webp"));
 
         //Set params without previously added params
         uri = "http://images.backend.iddiction.com/imageserve?v=201404141704&blob-key=AMIfv940OG-zgQtYE4nQAXMKAp7SvKDK8Q3ZTSDEiE5J_e6Ia05MPAy_thkQ5v0OdiQ7fNFhwRJ4xw9o4zJDcRMZv0EkD1z-r3nmqhLDdAMBgNdukofl31tzRKlbVWx8Drlij4ZVwRNKmSp_akQ1OsblYm9lf20UQA&thumb=114&out=webp&blur=50&q=20&recapp=false";
