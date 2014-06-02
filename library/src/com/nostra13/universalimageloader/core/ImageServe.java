@@ -38,9 +38,7 @@ public class ImageServe extends ImageLoader
             synchronized (ImageLoader.class)
             {
                 if (instance == null)
-                {
                     instance = new ImageServe();
-                }
             }
         }
         return instance;
@@ -54,9 +52,7 @@ public class ImageServe extends ImageLoader
     {
         List<ImageServeInfo> infoList = new ArrayList<ImageServeInfo>();
         for (ImageRequest imageRequest : requests)
-        {
             processImageRequest(infoList, imageRequest);
-        }
 
         processImageServeInfo(infoList, synchronous);
     }
