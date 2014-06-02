@@ -46,7 +46,7 @@ If you have some **issues on migration** to newer library version - be sure to a
 	<dependency>
 		<groupId>com.iddiction.imageserve</groupId>
 		<artifactId>image-serve</artifactId>
-		<version>1.0</version>
+		<version>1.0.2</version>
 	</dependency>
 </dependencies>
 
@@ -202,72 +202,6 @@ ImageServe.getInstance().serveImages(list, loadSynchroniously);
 ```
 
 **NOTE:** `ImageServe.serveImages` will download all images in requests in one response and then handle every request as single with all the parameters that were set. If `DisplayImageRequest` the it will display it, if `LoadImageRequest` then it will only load it. `ImageLoadingListener` will be called for every request.
-
-### Usage without `ImageRequest`
-
-### Simple
-``` java
-// Load image, decode it to Bitmap and display Bitmap in ImageView (or any other view 
-//	which implements ImageAware interface)
-imageServe.displayImage(imageUri, imageView);
-```
-``` java
-// Load image, decode it to Bitmap and return Bitmap to callback
-imageServe.loadImage(imageUri, new SimpleImageLoadingListener() {
-	@Override
-	public void onLoadingComplete(String imageUri, View view, Bitmap loadedImage) {
-		// Do whatever you want with Bitmap
-	}
-});
-```
-``` java
-// Load image, decode it to Bitmap and return Bitmap synchronously
-Bitmap bmp = imageServe.loadImageSync(imageUri);
-```
-
-### Complete
-``` java
-// Load image, decode it to Bitmap and display Bitmap in ImageView (or any other view 
-//	which implements ImageAware interface)
-imageServe.displayImage(imageUri, imageView, displayOptions, new ImageLoadingListener() {
-	@Override
-	public void onLoadingStarted(String imageUri, View view) {
-		...
-	}
-	@Override
-	public void onLoadingFailed(String imageUri, View view, FailReason failReason) {
-		...
-	}
-	@Override
-	public void onLoadingComplete(String imageUri, View view, Bitmap loadedImage) {
-		...
-	}
-	@Override
-	public void onLoadingCancelled(String imageUri, View view) {
-		...
-	}
-}, new ImageLoadingProgressListener() {
-	@Override
-	public void onProgressUpdate(String imageUri, View view, int current, int total) {
-		...
-	}
-});
-```
-``` java
-// Load image, decode it to Bitmap and return Bitmap to callback
-ImageSize targetSize = new ImageSize(120, 80); // result Bitmap will be fit to this size
-imageServe.loadImage(imageUri, targetSize, displayOptions, new SimpleImageLoadingListener() {
-	@Override
-	public void onLoadingComplete(String imageUri, View view, Bitmap loadedImage) {
-		// Do whatever you want with Bitmap
-	}
-});
-```
-``` java
-// Load image, decode it to Bitmap and return Bitmap synchronously
-ImageSize targetSize = new ImageSize(120, 80); // result Bitmap will be fit to this size
-Bitmap bmp = imageServe.loadImageSync(imageUri, targetSize, displayOptions);
-```
 
 ### ImageLoader Helpers
 Other useful methods and classes to consider.
