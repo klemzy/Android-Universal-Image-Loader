@@ -58,15 +58,15 @@ public class ImageServeUtil
                 if (viewScaleType == ViewScaleType.CROP)
                 {
                     //If crop then get fill picture and take smaller edge
-                    String paramName = "fill";
-                    String paramValue = String.valueOf(width > height ? height : width);
+                    String paramName = "fillc";
+                    String paramValue = width + "x" + height;
                     addParamToUrl(outUri, paramName, paramValue, delimiter);
                 }
                 else if (viewScaleType == ViewScaleType.FIT_INSIDE)
                 {
                     //If fill then get fit picture and take larger edge
-                    String paramName = "fit";
-                    String paramValue = String.valueOf(width > height ? width : height);
+                    String paramName = "fitc";
+                    String paramValue = width + "x" + height;
                     addParamToUrl(outUri, paramName, paramValue, delimiter);
                 }
             }
